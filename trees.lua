@@ -52,18 +52,19 @@ end
 width = 12
 immediate_replant = false
 refslot = 15
+dist = 10
 
 function refresh(i, height, f)
     turtle.turnLeft()
     -- for j=1,i+6-1 do turtle.forward() end
-    forward(true, i+6-1)
+    forward(true, i+dist-1)
     assert(up(false, height))
 
     f()
     
     assert(down(false, height))
     -- for j=1, i+6-1 do turtle.back() end
-    back(true, i+6-1)
+    back(true, i+dist-1)
     turtle.turnRight()
 end
 
@@ -78,7 +79,7 @@ function replenish_saplings()
     local slot = turtle.getSelectedSlot()
     turtle.select(9)
     -- local n = turtle.getItemSpace()
-    local n = (width * 2 + 1) - turtle.getItemCount()
+    local n = (math.ceil(width * (2 / 3)) + 1) - turtle.getItemCount()
     assert(turtle.suck(n))
     turtle.select(slot)
 end

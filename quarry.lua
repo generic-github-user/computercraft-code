@@ -289,6 +289,7 @@ function mine_layer(shape_, i)
     local y = shape_.y
     -- local pos = {x = 0, y = 0, z = -(i + (mode - 2))}
     local pos = { x = 0, y = 0, z = -(i - 1) }
+    print("current position: " .. textutils.serialize(pos))
     print("fuel status: " .. turtle.getFuelLevel() .. " / " .. turtle.getFuelLimit())
     if turtle.getFuelLevel() < (x * y + x) * 2 * 1.5 then
         refuel(pos)
@@ -334,7 +335,9 @@ function mine_layer(shape_, i)
         for j=1,x do
             for k=1,y do
                 local success, data = turtle.inspectDown()
-                if success and (data.name == "minecraft:water" or data.name == "minecraft:lava") and data.state.level == 0 then
+                if (success
+                        and (data.name == "minecraft:water" or data.name == "minecraft:lava")
+                        and data.state.level == 0) then
                     turtle.select(fuel_slot + 1)
                     assert(turtle.placeDown())
                 end
@@ -345,11 +348,13 @@ function mine_layer(shape_, i)
 
             for k=y,1,-1 do
                 if turtle.detectDown() then
-                    turtle.select(fuel_slot + 1)
+                    -- turtle.select(fuel_slot + 1)
                     -- if (not turtle.compareDown()) or turtle.getItemSpace() == 0 then
                     local s, d = turtle.inspect()
                     -- if (not (success and (data.name == "minecraft:stone" or data.name == "minecraft:cobblestone"))) or 
                     if shouldPickup(turtle.inspectDown) then
+                        turtle.select(fuel_slot + 1)
+                    else
                         turtle.select(1)
                     end
                     turtle.digDown()
@@ -425,6 +430,7 @@ mode = 1
 function main()
     local z = shape.z
     for i=1,z do
+        print("mining layer " .. i)
         -- mine_layer(shape.x, shape.y, i)
         if mode == 2 then
             down(true, 1)
@@ -436,7 +442,7 @@ function main()
             if i ~= z then down(false, 1) end
         end
     end
-    up(false, z)
+    up(false, z - 1)
     deposit_items({x = 0, y = 0, z = 0}, 16)
 end
 
