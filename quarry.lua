@@ -287,7 +287,8 @@ end
 function mine_layer(shape_, i)
     local x = shape_.x
     local y = shape_.y
-    local pos = {x = 0, y = 0, z = -(i + (mode - 2))}
+    -- local pos = {x = 0, y = 0, z = -(i + (mode - 2))}
+    local pos = { x = 0, y = 0, z = -(i - 1) }
     print("fuel status: " .. turtle.getFuelLevel() .. " / " .. turtle.getFuelLimit())
     if turtle.getFuelLevel() < (x * y + x) * 2 * 1.5 then
         refuel(pos)
@@ -295,7 +296,41 @@ function mine_layer(shape_, i)
     if occupied_slots(storage_slots) > 4 then
         deposit_items(pos, storage_slots)
     end
+
+    local fillIfEmpty = function ()
+        -- if is_nonsolid(unpack(turtle.inspect())) then
+        local s, d = turtle.inspect()
+        if is_nonsolid(s, d) then
+            turtle.select(findSlot(fuel_slot + 1, 16))
+            turtle.place()
+        end
+    end
+
+    local fillEdges = function ()
+        down(true, 1)
+        for i=0,3 do
+            turtle.select(1)
+            local limit = ({y, x})[i % 2 + 1]
+            for n=1,limit do
+                mkLeft(fillIfEmpty)()
+                if n ~= limit then forward(true, 1) end
+            end
+            turtle.turnRight()
+        end
+        up(true, 1)
+    end
+
+    local shouldPickup = function (inspector)
+        -- local success, data = turtle.inspect()
+        local success, data = inspector()
+        return (success and (data.name == "minecraft:stone" or data.name == "minecraft:cobblestone") and
+                range(fuel_slot + 1, 16):map(turtle.getItemSpace):all(
+                    function (i) return i ~= 0 end))
+    end
+
     if mode == 1 then
+        fillEdges()
+
         for j=1,x do
             for k=1,y do
                 local success, data = turtle.inspectDown()
@@ -311,7 +346,10 @@ function mine_layer(shape_, i)
             for k=y,1,-1 do
                 if turtle.detectDown() then
                     turtle.select(fuel_slot + 1)
-                    if (not turtle.compareDown()) or turtle.getItemSpace() == 0 then
+                    -- if (not turtle.compareDown()) or turtle.getItemSpace() == 0 then
+                    local s, d = turtle.inspect()
+                    -- if (not (success and (data.name == "minecraft:stone" or data.name == "minecraft:cobblestone"))) or 
+                    if shouldPickup(turtle.inspectDown) then
                         turtle.select(1)
                     end
                     turtle.digDown()
@@ -326,20 +364,6 @@ function mine_layer(shape_, i)
             end
         end
     elseif mode == 2 then
-        local fillIfEmpty = function ()
-            -- if is_nonsolid(unpack(turtle.inspect())) then
-            local s, d = turtle.inspect()
-            if is_nonsolid(s, d) then
-                turtle.select(findSlot(fuel_slot + 1, 16))
-                turtle.place()
-            end
-        end
-        local shouldPickup = function ()
-            local success, data = turtle.inspect()
-            return (success and data.name == "minecraft:stone" and
-                    range(fuel_slot + 1, 16):map(turtle.getItemSpace):all(
-                        function (i) return i ~= 0 end))
-        end
         for j=1,x do
             for k=1,y do
                 if j == 1 then mkLeft(fillIfEmpty)() end
@@ -357,7 +381,7 @@ function mine_layer(shape_, i)
                     end
                 end
 
-                if shouldPickup() then
+                if shouldPickup(turtle.inspect) then
                     turtle.select(fuel_slot + 1)
                 else
                     turtle.select(1)
@@ -396,7 +420,7 @@ fuel_slot = 13
 fuel_increment = 8
 storage_slots = 12
 start = 0
-mode = 2
+mode = 1
 
 function main()
     local z = shape.z

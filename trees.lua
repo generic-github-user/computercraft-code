@@ -201,7 +201,7 @@ function main()
     repeat
         assert(turtle.getItemCount(refslot) ~= 0)
         full_harvest()
-        sleep(10)
+        sleep(30)
     until false
 end
 
