@@ -54,6 +54,79 @@ move_x = axis_movement(left, right)
 move_y = axis_movement(back, forward)
 move_z = axis_movement(down, up)
 
+function placeLeft()
+    turtle.turnLeft()
+    turtle.place()
+    turtle.turnRight()
+end
+
+function placeRight()
+    turtle.turnRight()
+    turtle.place()
+    turtle.turnLeft()
+end
+
+function placeBack()
+    turnRight(2)
+    turtle.place()
+    turnRight(2)
+end
+
+function Some(x)
+    return { some = true, value = x }
+end
+
+function None()
+    return { some = false, value = nil }
+end
+
+function unwrap(x)
+    assert(x.some)
+    return x.value
+end
+
+List = {}
+
+function List:new()
+    local l = { size = 0, data = {} }
+    setmetatable(l, self)
+    self.__index = self
+    return l
+end
+
+function List:append(x)
+    self.data[self.size+1] = x
+    self.size = self.size + 1
+    return self
+end
+
+function List:findIf(f)
+    for i=1,self.size do
+        if f(self.data[i]) then
+            return Some(i)
+        end
+    end
+    return None()
+end
+
+function range(a, b)
+    l = List:new()
+    for i=a, b do
+        l.append(i)
+    end
+    return l
+end
+
+print(range(5, 9).findIf(function (i) return i > 7 end))
+
+function isOccupied(i)
+    return turtle.getItemCount(i) > 0
+end
+
+function findSlot(a, b)
+    return range(a, b).findIf(isOccupied).unwrap()
+end
+
 -- function refresh(i, height, f)
     -- back(false, i+6-1)
     -- turtle.turnLeft()
@@ -198,7 +271,7 @@ fuel_pos = { x = 0, y = -1, z = 0 }
 
 storage_pos = { x = 0, y = -3, z = 0 }
 storage_shape = { y = 5, z = 1 }
-fuel_slot = 15
+fuel_slot = 13
 fuel_increment = 8
 start = 5
 
