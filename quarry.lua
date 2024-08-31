@@ -72,6 +72,41 @@ function placeBack()
     turnRight(2)
 end
 
+-- TODO: orientation-based API
+function mkLeft(f)
+    return (function ()
+        turtle.turnLeft()
+        local r = f()
+        turtle.turnRight()
+        return r
+    end)
+end
+
+function mkRight(f)
+    return (function ()
+        turtle.turnRight()
+        local r = f()
+        turtle.turnLeft()
+        return r
+    end)
+end
+
+function mkBack(f)
+    return (function ()
+        turnRight(2)
+        local r = f()
+        turnRight(2)
+        return r
+    end)
+end
+
+placeLeft = mkLeft(turtle.place)
+placeRight = mkRight(turtle.place)
+placeBack = mkBack(turtle.place)
+inspectLeft = mkLeft(turtle.inspect)
+inspectRight = mkRight(turtle.inspect)
+inspectBack = mkBack(turtle.inspect)
+
 function Some(x)
     return { some = true, value = x }
 end
@@ -224,6 +259,10 @@ function deposit_items(pos)
     travel_to(current_pos, vec(pos)) -- ?
 end
 
+function is_nonsolid(success, data)
+    return (not success) or (success and data.name == "minecraft:water" or data.name == "minecraft:lava")
+end
+
 function mine_layer(shape_, i)
     local x = shape_.x
     local y = shape_.y
@@ -239,7 +278,7 @@ function mine_layer(shape_, i)
             for k=1,y do
                 local success, data = turtle.inspectDown()
                 if success and (data.name == "minecraft:water" or data.name == "minecraft:lava") and data.state.level == 0 then
-                    turtle.select(16)
+                    turtle.select(fuel_slot + 1)
                     assert(turtle.placeDown())
                 end
                 if k ~= y then
@@ -249,7 +288,7 @@ function mine_layer(shape_, i)
 
             for k=y,1,-1 do
                 if turtle.detectDown() then
-                    turtle.select(16)
+                    turtle.select(fuel_slot + 1)
                     if (not turtle.compareDown()) or turtle.getItemSpace() == 0 then
                         turtle.select(1)
                     end
@@ -265,7 +304,20 @@ function mine_layer(shape_, i)
             end
         end
     elseif mode == 2 then
-
+        local fillIfEmpty = function ()
+            if is_nonsolid(unpack(turtle.inspect())) then
+                turtle.select(findSlot(fuel_slot + 1, 16))
+                turtle.place()
+            end
+        end
+        for j=1,x do
+            for k=1,y do
+                if j == 1 then mkLeft(fillIfEmpty)() end
+                if j == x then mkRight(fillIfEmpty)() end
+                if k == 1 then mkBack(fillIfEmpty)() end
+                if k == y then fillIfEmpty() end
+            end
+        end
     end
     -- ??
     left(false, x-1)
