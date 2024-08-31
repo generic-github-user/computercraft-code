@@ -103,28 +103,30 @@ end
 function List:findIf(f)
     for i=1,self.size do
         if f(self.data[i]) then
-            return Some(i)
+            -- return Some(i)
+            return Some(self.data[i])
         end
     end
     return None()
 end
 
 function range(a, b)
-    l = List:new()
+    local l = List:new()
     for i=a, b do
-        l.append(i)
+        l:append(i)
     end
     return l
 end
 
-print(range(5, 9).findIf(function (i) return i > 7 end))
+-- print(range(5, 9).findIf(function (i) return i > 7 end))
+print(unwrap(range(5, 9):findIf(function (i) return i > 7 end)))
 
 function isOccupied(i)
     return turtle.getItemCount(i) > 0
 end
 
 function findSlot(a, b)
-    return range(a, b).findIf(isOccupied).unwrap()
+    return unwrap(range(a, b):findIf(isOccupied))
 end
 
 -- function refresh(i, height, f)
@@ -204,12 +206,12 @@ function deposit_items(pos)
             turtle.turnLeft()
             assert(turtle.detect())
             -- TODO: higher-level handling of inventory slot selection/deselection
-            for s=1,14 do
+            for s=1,12 do
                 turtle.select(s)
                 turtle.drop()
             end
             turtle.turnRight()
-            if occupied_slots(14) == 0 then
+            if occupied_slots(storage_slots) == 0 then
                 success = true
                 -- break
                 goto next
@@ -225,64 +227,75 @@ end
 function mine_layer(shape_, i)
     local x = shape_.x
     local y = shape_.y
-    local pos = {x = 0, y = 0, z = -(i-1)}
+    local pos = {x = 0, y = 0, z = -(i + (mode - 2))}
     if turtle.getFuelLevel() < (x * y + x) * 2 * 1.5 then
         refuel(pos)
     end
-    if occupied_slots(14) > 4 then
+    if occupied_slots(storage_slots) > 4 then
         deposit_items(pos)
     end
-    for j=1,x do
-        for k=1,y do
-            local success, data = turtle.inspectDown()
-            if success and (data.name == "minecraft:water" or data.name == "minecraft:lava") and data.state.level == 0 then
-                turtle.select(16)
-                assert(turtle.placeDown())
-            end
-            if k ~= y then
-                forward(false, 1)
-            end
-        end
-
-        for k=y,1,-1 do
-            if turtle.detectDown() then
-                turtle.select(16)
-                if (not turtle.compareDown()) or turtle.getItemSpace() == 0 then
-                    turtle.select(1)
+    if mode == 1 then
+        for j=1,x do
+            for k=1,y do
+                local success, data = turtle.inspectDown()
+                if success and (data.name == "minecraft:water" or data.name == "minecraft:lava") and data.state.level == 0 then
+                    turtle.select(16)
+                    assert(turtle.placeDown())
                 end
-                turtle.digDown()
+                if k ~= y then
+                    forward(false, 1)
+                end
             end
-            if k ~= 1 then
-                back(false, 1)
-            end
-        end
 
-        if j ~= x then
-            right(false, 1)
+            for k=y,1,-1 do
+                if turtle.detectDown() then
+                    turtle.select(16)
+                    if (not turtle.compareDown()) or turtle.getItemSpace() == 0 then
+                        turtle.select(1)
+                    end
+                    turtle.digDown()
+                end
+                if k ~= 1 then
+                    back(false, 1)
+                end
+            end
+
+            if j ~= x then
+                right(false, 1)
+            end
         end
+    elseif mode == 2 then
+
     end
     -- ??
     left(false, x-1)
 end
 
 current_pos = vector.new(0, 0, 0)
-shape = { x = 10, y = 10, z = 30 }
+shape = { x = 5, y = 5, z = 3 }
 fuel_pos = { x = 0, y = -1, z = 0 }
 
 storage_pos = { x = 0, y = -3, z = 0 }
 storage_shape = { y = 5, z = 1 }
 fuel_slot = 13
 fuel_increment = 8
-start = 5
+storage_slots = 12
+start = 0
+mode = 2
 
 function main()
     local z = shape.z
     for i=1,z do
         -- mine_layer(shape.x, shape.y, i)
+        if mode == 2 then
+            down(true, 1)
+        end
         if i > start then
             mine_layer(shape, i)
         end
-        if i ~= z then down(false, 1) end
+        if mode == 1 then
+            if i ~= z then down(false, 1) end
+        end
     end
     up(false, z-1)
     deposit_items({x = 0, y = 0, z = 0})
