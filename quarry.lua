@@ -145,6 +145,23 @@ function List:findIf(f)
     return None()
 end
 
+function List:map(f)
+    local l = List:new()
+    for i=1, self.size do
+        l:append(f(self.data[i]))
+    end
+    return l
+end
+
+function List:all(f)
+    for i=1, self.size do
+        if not f(self.data[i]) then
+            return false
+        end
+    end
+    return true
+end
+
 function range(a, b)
     local l = List:new()
     for i=a, b do
@@ -229,7 +246,7 @@ function refuel(pos)
     travel_to(p2, p1)
 end
 
-function deposit_items(pos)
+function deposit_items(pos, slots)
     print("storing inventory contents in chest array")
     -- local p1 = vec(pos)
     -- local p2 = vec(
@@ -241,7 +258,7 @@ function deposit_items(pos)
             turtle.turnLeft()
             assert(turtle.detect())
             -- TODO: higher-level handling of inventory slot selection/deselection
-            for s=1,12 do
+            for s=1,slots do
                 turtle.select(s)
                 turtle.drop()
             end
@@ -267,11 +284,12 @@ function mine_layer(shape_, i)
     local x = shape_.x
     local y = shape_.y
     local pos = {x = 0, y = 0, z = -(i + (mode - 2))}
+    print("fuel status: " .. turtle.getFuelLevel() .. " / " .. turtle.getFuelLimit())
     if turtle.getFuelLevel() < (x * y + x) * 2 * 1.5 then
         refuel(pos)
     end
     if occupied_slots(storage_slots) > 4 then
-        deposit_items(pos)
+        deposit_items(pos, storage_slots)
     end
     if mode == 1 then
         for j=1,x do
@@ -316,8 +334,33 @@ function mine_layer(shape_, i)
                 if j == x then mkRight(fillIfEmpty)() end
                 if k == 1 then mkBack(fillIfEmpty)() end
                 if k == y then fillIfEmpty() end
+
+                local success, data = turtle.inspect()
+                if (success and data.name == "minecraft:stone" and
+                    range(fuel_slot + 1, 16):map(turtle.getItemSpace):all(
+                        function (i) return turtle.getItemSpace(i) ~= 0 end)) then
+                    turtle.select(fuel_slot + 1)
+                else
+                    turtle.select(1)
+                end
+
+                if k ~= y then
+                    if j % 2 == 1 then
+                        forward(true, 1)
+                    -- else
+                        -- TODO
+                        -- back(true, 1)
+                    end
+                end
+            end
+            if j ~= x then
+                if j % 2 == 1 then turtle.turnRight() else turtle.turnLeft() end
+                turtle.select(1)
+                forward(true, 1)
+                if j % 2 == 1 then turtle.turnRight() else turtle.turnLeft() end
             end
         end
+        turnRight(2)
     end
     -- ??
     left(false, x-1)
@@ -350,7 +393,7 @@ function main()
         end
     end
     up(false, z-1)
-    deposit_items({x = 0, y = 0, z = 0})
+    deposit_items({x = 0, y = 0, z = 0}, 16)
 end
 
 main()
