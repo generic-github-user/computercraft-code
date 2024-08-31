@@ -276,8 +276,12 @@ function deposit_items(pos, slots)
     travel_to(current_pos, vec(pos)) -- ?
 end
 
+function isLiquid(success, data)
+    return success and (data.name == "minecraft:water" or data.name == "minecraft:lava")
+end
+
 function is_nonsolid(success, data)
-    return (not success) or (success and data.name == "minecraft:water" or data.name == "minecraft:lava")
+    return (not success) or isLiquid(success, data)
 end
 
 function mine_layer(shape_, i)
@@ -323,10 +327,18 @@ function mine_layer(shape_, i)
         end
     elseif mode == 2 then
         local fillIfEmpty = function ()
-            if is_nonsolid(unpack(turtle.inspect())) then
+            -- if is_nonsolid(unpack(turtle.inspect())) then
+            local s, d = turtle.inspect()
+            if is_nonsolid(s, d) then
                 turtle.select(findSlot(fuel_slot + 1, 16))
                 turtle.place()
             end
+        end
+        local shouldPickup = function ()
+            local success, data = turtle.inspect()
+            return (success and data.name == "minecraft:stone" and
+                    range(fuel_slot + 1, 16):map(turtle.getItemSpace):all(
+                        function (i) return i ~= 0 end))
         end
         for j=1,x do
             for k=1,y do
@@ -335,22 +347,30 @@ function mine_layer(shape_, i)
                 if k == 1 then mkBack(fillIfEmpty)() end
                 if k == y then fillIfEmpty() end
 
-                local success, data = turtle.inspect()
-                if (success and data.name == "minecraft:stone" and
-                    range(fuel_slot + 1, 16):map(turtle.getItemSpace):all(
-                        function (i) return turtle.getItemSpace(i) ~= 0 end)) then
+                -- TODO
+                if k ~= y then
+                    local s, d = turtle.inspect()
+                    if isLiquid(s, d) and d.state.level == 0 then
+                        -- turtle.select(fuel_slot + 1)
+                        turtle.select(findSlot(fuel_slot + 1, 16))
+                        turtle.place()
+                    end
+                end
+
+                if shouldPickup() then
                     turtle.select(fuel_slot + 1)
                 else
                     turtle.select(1)
                 end
 
                 if k ~= y then
-                    if j % 2 == 1 then
-                        forward(true, 1)
+                    forward(true, 1)
+                    -- if j % 2 == 1 then
+                        -- forward(true, 1)
                     -- else
                         -- TODO
                         -- back(true, 1)
-                    end
+                    -- end
                 end
             end
             if j ~= x then
@@ -360,7 +380,7 @@ function mine_layer(shape_, i)
                 if j % 2 == 1 then turtle.turnRight() else turtle.turnLeft() end
             end
         end
-        turnRight(2)
+        if x % 2 == 0 then turnRight(2) else back(true, y-1) end
     end
     -- ??
     left(false, x-1)
@@ -392,7 +412,7 @@ function main()
             if i ~= z then down(false, 1) end
         end
     end
-    up(false, z-1)
+    up(false, z)
     deposit_items({x = 0, y = 0, z = 0}, 16)
 end
 
