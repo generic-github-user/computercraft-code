@@ -162,6 +162,16 @@ function List:all(f)
     return true
 end
 
+function List:any(f)
+    for i=1, self.size do
+        if f(self.data[i]) then
+            return true
+        end
+    end
+    return false
+end
+
+
 function range(a, b)
     local l = List:new()
     for i=a, b do
@@ -303,7 +313,7 @@ function mine_layer(shape_, i)
         local s, d = turtle.inspect()
         if is_nonsolid(s, d) then
             turtle.select(findSlot(fuel_slot + 1, 16))
-            turtle.place()
+            assert(turtle.place())
         end
     end
 
@@ -325,7 +335,7 @@ function mine_layer(shape_, i)
         -- local success, data = turtle.inspect()
         local success, data = inspector()
         return (success and (data.name == "minecraft:stone" or data.name == "minecraft:cobblestone") and
-                range(fuel_slot + 1, 16):map(turtle.getItemSpace):all(
+                range(fuel_slot + 1, 16):map(turtle.getItemSpace):any(
                     function (i) return i ~= 0 end))
     end
 
@@ -352,6 +362,7 @@ function mine_layer(shape_, i)
                     -- if (not turtle.compareDown()) or turtle.getItemSpace() == 0 then
                     local s, d = turtle.inspect()
                     -- if (not (success and (data.name == "minecraft:stone" or data.name == "minecraft:cobblestone"))) or 
+                    -- TODO: bug
                     if shouldPickup(turtle.inspectDown) then
                         turtle.select(fuel_slot + 1)
                     else
@@ -447,3 +458,5 @@ function main()
 end
 
 main()
+
+-- TODO: handle mobs/entities
