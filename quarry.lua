@@ -249,7 +249,7 @@ function vec(v)
     return vector.new(v.x, v.y, v.z)
 end
 
-function refuel(pos)
+function refuel(pos, fuel_limit)
     print("almost out of fuel, refuelling")
     local p1 = vec(pos)
     local p2 = vec(fuel_pos)
@@ -258,8 +258,9 @@ function refuel(pos)
 
     local slot = turtle.getSelectedSlot()
     turtle.select(fuel_slot)
-    assert(turtle.suck(fuel_increment))
-    turtle.refuel(fuel_increment)
+    local n = math.ceil(fuel_limit / 80) + 1
+    assert(turtle.suck(n))
+    turtle.refuel(n)
     turtle.select(slot)
 
     turtle.turnRight()
@@ -316,8 +317,9 @@ function mine_layer(shape_, i)
     local pos = { x = 0, y = 0, z = -(i - 1) }
     print("current position: " .. textutils.serialize(pos))
     print("fuel status: " .. turtle.getFuelLevel() .. " / " .. turtle.getFuelLimit())
-    if turtle.getFuelLevel() < (x * y + x) * 2 * 1.5 then
-        refuel(pos)
+    local fuel_limit = (x * y + x) * 2 * 1.5
+    if turtle.getFuelLevel() < fuel_limit then
+        refuel(pos, fuel_limit)
     end
     if occupied_slots(storage_slots) > 4 then
         deposit_items(pos, storage_slots)
@@ -329,6 +331,7 @@ function mine_layer(shape_, i)
         if waterlogged(s, d) then
             turtle.dig()
         end
+        -- turtle.dig()
 
         local s, d = turtle.inspect()
         if is_nonsolid(s, d) then
@@ -453,7 +456,7 @@ function mine_layer(shape_, i)
 end
 
 current_pos = vector.new(0, 0, 0)
-shape = { x = 10, y = 10, z = 40 }
+shape = { x = 30, y = 30, z = 40 }
 fuel_pos = { x = 0, y = -1, z = 0 }
 
 storage_pos = { x = 0, y = -3, z = 0 }
@@ -461,7 +464,7 @@ storage_shape = { y = 5, z = 2 }
 fuel_slot = 13
 fuel_increment = 8
 storage_slots = 12
-start = 21
+start = 0
 mode = 1
 
 function main()
