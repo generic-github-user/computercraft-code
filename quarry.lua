@@ -464,10 +464,20 @@ storage_shape = { y = 5, z = 2 }
 fuel_slot = 13
 fuel_increment = 8
 storage_slots = 12
-start = 0
+start = 1
 mode = 1
 
 function main()
+    -- pre-checks
+    assert(range(1, storage_slots):all(function (i)
+        local data = turtle.getItemDetail(i)
+        return data == nil
+    end))
+    assert(range(fuel_slot+1, 16):all(function (i)
+        local data = turtle.getItemDetail(i)
+        return data ~= nil and data.name == "minecraft:cobblestone" and data.count == 64
+    end))
+
     local z = shape.z
     for i=1,z do
         print("mining layer " .. i)
