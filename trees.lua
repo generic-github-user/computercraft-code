@@ -75,8 +75,9 @@ end
 
 function refuel()
     turtle.select(16)
-    assert(turtle.suck(8))
-    turtle.refuel(8)
+    local n = math.ceil((width * 2 * (2 / 3) * 40) / 80) + 1
+    assert(turtle.suck(n))
+    turtle.refuel(n)
     turtle.select(1)
 end
 
