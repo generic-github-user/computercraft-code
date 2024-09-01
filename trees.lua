@@ -44,6 +44,16 @@ function back(dig, n)
     turnRight(2)
 end
 
+-- TODO
+function safeBack(n)
+    for i=1,n do
+        local r = turtle.back()
+        if not r then
+            back(true, 1)
+        end
+    end
+end
+
 -- digUp = move_dig(turtle
 
 -- left_n = move_n(function () return left(true) end)
@@ -85,7 +95,7 @@ function deposit_items()
         turtle.select(i)
         if turtle.getItemCount() > 0 then
             assert(turtle.compareTo(refslot))
-            turtle.drop()
+            assert(turtle.drop())
         end
     end
     turtle.select(slot)
@@ -148,7 +158,7 @@ function replant()
                 -- TODO: clean this up...
                 turtle.dig()
                 turtle.place()
-                back(true, 1)
+                safeBack(1)
                 -- turtle.back()
                 turtle.place()
             end
