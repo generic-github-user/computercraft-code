@@ -229,8 +229,8 @@ function travel_to(pos, target)
     local delta = target - pos
     print("following vector: " .. serialize_vector(delta) .. " (" .. serialize_vector(pos) .. " -> " .. serialize_vector(target) .. ")")
 
-    move_x(delta.x)
     move_y(delta.y)
+    move_x(delta.x)
     move_z(delta.z)
     current_pos = target
 end
@@ -314,16 +314,8 @@ function mine_layer(shape_, i)
     local x = shape_.x
     local y = shape_.y
     -- local pos = {x = 0, y = 0, z = -(i + (mode - 2))}
-    local pos = { x = 0, y = 0, z = -(i - 1) }
     print("current position: " .. textutils.serialize(pos))
     print("fuel status: " .. turtle.getFuelLevel() .. " / " .. turtle.getFuelLimit())
-    local fuel_limit = (x * y + x) * 2 * 1.5
-    if turtle.getFuelLevel() < fuel_limit then
-        refuel(pos, fuel_limit)
-    end
-    if occupied_slots(storage_slots) > 4 then
-        deposit_items(pos, storage_slots)
-    end
 
     local fillIfEmpty = function ()
         -- if is_nonsolid(unpack(turtle.inspect())) then
@@ -366,6 +358,15 @@ function mine_layer(shape_, i)
         fillEdges()
 
         for j=1,x do
+            local pos = { x = (j - 1), y = 0, z = -(i - 1) }
+            local fuel_limit = (x * y + x) * 2 * 1.5
+            if turtle.getFuelLevel() < fuel_limit then
+                refuel(pos, fuel_limit)
+            end
+            if occupied_slots(storage_slots) > 4 then
+                deposit_items(pos, storage_slots)
+            end
+
             for k=1,y do
                 local success, data = turtle.inspectDown()
                 if waterlogged(success, data) then
@@ -464,7 +465,7 @@ storage_shape = { y = 5, z = 2 }
 fuel_slot = 13
 fuel_increment = 8
 storage_slots = 12
-start = 1
+start = 3
 mode = 1
 
 function main()
@@ -500,3 +501,4 @@ main()
 
 -- TODO: handle mobs/entities
 -- TODO: add starting material assertions
+-- TODO: more assertions (including most/all movements)
