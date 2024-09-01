@@ -79,7 +79,7 @@ function replenish_saplings()
     local slot = turtle.getSelectedSlot()
     turtle.select(9)
     -- local n = turtle.getItemSpace()
-    local n = (math.ceil(width * (2 / 3)) + 1) - turtle.getItemCount()
+    local n = (math.ceil(width * 2 * (2 / 3)) + 1) - turtle.getItemCount()
     assert(turtle.suck(n))
     turtle.select(slot)
 end

@@ -40,6 +40,16 @@ function back(dig, n)
     -- current_pos = current_pos + vec(0, -1, 0)
 end
 
+-- TODO
+function safeBack(n)
+    for i=1,n do
+        local r = turtle.back()
+        if not r then
+            back(true, 1)
+        end
+    end
+end
+
 function axis_movement(f, g)
     return (function (n)
         if n < 0 then
@@ -286,8 +296,13 @@ function deposit_items(pos, slots)
     travel_to(current_pos, vec(pos)) -- ?
 end
 
+function waterlogged(success, data)
+    return success and data.state ~= nil and data.state.waterlogged
+end
+
 function isLiquid(success, data)
     return success and (data.name == "minecraft:water" or data.name == "minecraft:lava")
+        -- or (data.state ~= nil and data.state.waterlogged))
 end
 
 function is_nonsolid(success, data)
@@ -310,6 +325,11 @@ function mine_layer(shape_, i)
 
     local fillIfEmpty = function ()
         -- if is_nonsolid(unpack(turtle.inspect())) then
+        local s, d = turtle.inspect()
+        if waterlogged(s, d) then
+            turtle.dig()
+        end
+
         local s, d = turtle.inspect()
         if is_nonsolid(s, d) then
             turtle.select(findSlot(fuel_slot + 1, 16))
@@ -345,14 +365,20 @@ function mine_layer(shape_, i)
         for j=1,x do
             for k=1,y do
                 local success, data = turtle.inspectDown()
+                if waterlogged(success, data) then
+                    turtle.digDown()
+                end
+                
+                local success, data = turtle.inspectDown()
                 if (success
                         and (data.name == "minecraft:water" or data.name == "minecraft:lava")
                         and data.state.level == 0) then
-                    turtle.select(fuel_slot + 1)
+                    -- turtle.select(fuel_slot + 1)
+                    turtle.select(findSlot(fuel_slot + 1, 16))
                     assert(turtle.placeDown())
                 end
                 if k ~= y then
-                    forward(false, 1)
+                    forward(true, 1)
                 end
             end
 
@@ -371,12 +397,12 @@ function mine_layer(shape_, i)
                     turtle.digDown()
                 end
                 if k ~= 1 then
-                    back(false, 1)
+                    safeBack(1)
                 end
             end
 
             if j ~= x then
-                right(false, 1)
+                right(true, 1)
             end
         end
     elseif mode == 2 then
@@ -427,15 +453,15 @@ function mine_layer(shape_, i)
 end
 
 current_pos = vector.new(0, 0, 0)
-shape = { x = 5, y = 5, z = 3 }
+shape = { x = 10, y = 10, z = 40 }
 fuel_pos = { x = 0, y = -1, z = 0 }
 
 storage_pos = { x = 0, y = -3, z = 0 }
-storage_shape = { y = 5, z = 1 }
+storage_shape = { y = 5, z = 2 }
 fuel_slot = 13
 fuel_increment = 8
 storage_slots = 12
-start = 0
+start = 21
 mode = 1
 
 function main()
@@ -460,3 +486,4 @@ end
 main()
 
 -- TODO: handle mobs/entities
+-- TODO: add starting material assertions
