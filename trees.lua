@@ -49,11 +49,6 @@ end
 -- left_n = move_n(function () return left(true) end)
 -- right_n = move_n(function () return right(true) end)
 
-width = 12
-immediate_replant = false
-refslot = 15
-dist = 10
-
 function refresh(i, height, f)
     turtle.turnLeft()
     -- for j=1,i+6-1 do turtle.forward() end
@@ -112,17 +107,28 @@ function attempt_harvest(depth)
         assert(turtle.forward())
         repeat
             turtle.digUp()
+            if treetype == "spruce" then
+                turtle.dig()
+            end
             turtle.up()
             height = height + 1
         until not turtle.detectUp()
+        if treetype == "spruce" then
+            forward(true, 1)
+            repeat
+                up(true, 1)
+                height = height + 1
+            until not turtle.detectUp()
+            back(true, 1)
+        end
         for j=1,height do
             -- handle leaves from newly grown trees
             turtle.digDown()
             turtle.down()
         end
-        if depth == 0 then
-          attempt_harvest(1)
-        end
+        -- if depth == 0 then
+          -- attempt_harvest(1)
+        -- end
         turtle.back()
     end
 end
@@ -197,6 +203,12 @@ function full_harvest()
     replant()
     left(true, width)
 end
+
+width = 45
+treetype = "spruce"
+immediate_replant = false
+refslot = 15
+dist = 10
 
 function main()
     repeat
