@@ -77,7 +77,7 @@ function refuel(fuel_limit)
     turtle.select(16)
     local n = math.ceil(fuel_limit / 80) + 1
     assert(turtle.suck(n))
-    turtle.refuel(n)
+    assert(turtle.refuel(n))
     turtle.select(1)
 end
 

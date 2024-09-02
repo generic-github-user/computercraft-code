@@ -250,18 +250,20 @@ function vec(v)
 end
 
 function refuel(pos, fuel_limit)
-    print("almost out of fuel, refuelling")
+    print("almost out of fuel, refuelling -- " .. fuel_limit .. " units")
     local p1 = vec(pos)
     local p2 = vec(fuel_pos)
     travel_from(p1, p2)
     turtle.turnLeft()
 
+    display_fuel()
     local slot = turtle.getSelectedSlot()
     turtle.select(fuel_slot)
     local n = math.ceil(fuel_limit / 80) + 1
     assert(turtle.suck(n))
-    turtle.refuel(n)
+    assert(turtle.refuel(n))
     turtle.select(slot)
+    display_fuel()
 
     turtle.turnRight()
     travel_to(p2, p1)
@@ -310,12 +312,16 @@ function is_nonsolid(success, data)
     return (not success) or isLiquid(success, data)
 end
 
+function display_fuel()
+    print("fuel status: " .. turtle.getFuelLevel() .. " / " .. turtle.getFuelLimit())
+end
+
 function mine_layer(shape_, i)
     local x = shape_.x
     local y = shape_.y
     -- local pos = {x = 0, y = 0, z = -(i + (mode - 2))}
     print("current position: " .. textutils.serialize(pos))
-    print("fuel status: " .. turtle.getFuelLevel() .. " / " .. turtle.getFuelLimit())
+    display_fuel()
 
     local fillIfEmpty = function ()
         -- if is_nonsolid(unpack(turtle.inspect())) then
