@@ -463,11 +463,11 @@ function mine_layer(shape_, i)
 end
 
 current_pos = vector.new(0, 0, 0)
-shape = { x = 30, y = 30, z = 40 }
+shape = { x = 30, y = 30, z = 90 }
 fuel_pos = { x = 0, y = -1, z = 0 }
 
 storage_pos = { x = 0, y = -3, z = 0 }
-storage_shape = { y = 5, z = 2 }
+storage_shape = { y = 10, z = 3 }
 fuel_slot = 13
 fuel_increment = 8
 storage_slots = 12
