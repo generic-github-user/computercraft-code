@@ -73,9 +73,9 @@ function refresh(i, height, f)
     turtle.turnRight()
 end
 
-function refuel()
+function refuel(fuel_limit)
     turtle.select(16)
-    local n = math.ceil((width * 2 * (2 / 3) * 40) / 80) + 1
+    local n = math.ceil(fuel_limit / 80) + 1
     assert(turtle.suck(n))
     turtle.refuel(n)
     turtle.select(1)
@@ -181,8 +181,9 @@ function full_harvest()
         print("processing slice " .. i)
         print("fuel status: " .. turtle.getFuelLevel() .. " / " .. turtle.getFuelLimit())
 
-        if turtle.getFuelLevel() < 50 * 2 * 2 * 1.5 then
-            refresh(i, 1, refuel)
+        local fuel_limit = width * 2 * (2 / 3) * 40
+        if turtle.getFuelLevel() < fuel_limit then
+            refresh(i, 1, function () refuel(fuel_limit) end)
         end
         if occupied_slots(8) > 4 then
             refresh(i, 0, deposit_items)
