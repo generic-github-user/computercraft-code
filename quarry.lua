@@ -316,6 +316,15 @@ function display_fuel()
     print("fuel status: " .. turtle.getFuelLevel() .. " / " .. turtle.getFuelLimit())
 end
 
+function retry(f)
+    repeat
+        local r = f()
+        if r then break end
+        sleep(1)
+    until false
+    return true
+end
+
 function mine_layer(shape_, i)
     local x = shape_.x
     local y = shape_.y
@@ -334,7 +343,7 @@ function mine_layer(shape_, i)
         local s, d = turtle.inspect()
         if is_nonsolid(s, d) then
             turtle.select(findSlot(fuel_slot + 1, 16))
-            assert(turtle.place())
+            assert(retry(turtle.place))
         end
     end
 
@@ -385,7 +394,7 @@ function mine_layer(shape_, i)
                         and data.state.level == 0) then
                     -- turtle.select(fuel_slot + 1)
                     turtle.select(findSlot(fuel_slot + 1, 16))
-                    assert(turtle.placeDown())
+                    assert(retry(turtle.placeDown))
                 end
                 if k ~= y then
                     forward(true, 1)
@@ -429,7 +438,7 @@ function mine_layer(shape_, i)
                     if isLiquid(s, d) and d.state.level == 0 then
                         -- turtle.select(fuel_slot + 1)
                         turtle.select(findSlot(fuel_slot + 1, 16))
-                        turtle.place()
+                        retry(turtle.place)
                     end
                 end
 
@@ -508,3 +517,4 @@ main()
 -- TODO: handle mobs/entities
 -- TODO: add starting material assertions
 -- TODO: more assertions (including most/all movements)
+-- TODO: virtual chests that stripe together multiple physical storage units
