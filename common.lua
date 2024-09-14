@@ -455,7 +455,7 @@ end
 Rect = {}
 
 function Rect:new(pos, dims)
-  local r = { pos = pos, dims = dims }
+  local r = { pos = pos, dims = dims, type_ = "rect" }
   setmetatable(r, self)
   self.__index = self
   self.__eq = derive_eq(List:from({ "pos", "dims" }))
@@ -478,8 +478,8 @@ function Rect:bounds()
 end
 
 function Rect:bound_ranges()
-  local a, b = self.bounds()
-  return Range(a.x, b.x), Range(a.y, b.y), Range(a.z, b.z)
+  local a, b = self:bounds()
+  return Range:new(a.x, b.x), Range:new(a.y, b.y), Range:new(a.z, b.z)
 end
 
 -- function Rect:intersect(a, b)

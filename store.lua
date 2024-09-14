@@ -9,7 +9,9 @@ function move_xyz(delta)
 end
 
 function travel(pos, target)
-  return move_xyz(target - pos)
+  -- return move_xyz(target - pos)
+  move_xyz(target - pos)
+  return target
 end
 
 TurtleStorage = {}
@@ -24,8 +26,8 @@ end
 info = {
   inv_peripheral = vector.new(0, 1, 0),
   staging = VChest:new(List:singleton(vector.new(0, 1, 1))),
-  staging_delta = "south",
-  storage = VChest:new(Rect(vector.new(3, 1, 0), vector.new(6, 1, 2)):blocks()),
+  staging_delta = "up",
+  storage = VChest:new(Rect:new(vector.new(3, 1, 0), vector.new(6, 1, 2)):blocks()),
   fuel = VChest:new(List:singleton(vector.new(-2, 1, 0)))
 }
 current_pos = vector.new(0, 0, 0)
@@ -38,16 +40,25 @@ function transfer_items(a, b)
 
 end
 
+function List:call(f)
+  f(self)
+  return self
+end
+
 function store()
   local inv = peripheral.find("inventoryManager")
   print(textutils.serialize(info.storage))
 
+  current_pos = travel(current_pos, info.inv_peripheral - vector.new(0, 1, 0))
   player_items(inv)
     :filter(function (i) return i.slot >= 9 and i.slot <= 36 end)
     :filter(function (i) return i.count > 0 end)
+    :call(function (l) print("Transferring " .. l:length()
+      .. " stacks from player inventory") end)
     :foreach(function (item, j)
-      removeItemFromPlayer(info.staging_delta,
-      { toSlot = j, fromSlot = item.slot, count = item.count }) end)
+      print(" - slot " .. item.slot .. ": moving " .. item.name .. " (" .. item.count .. ")")
+      inv.removeItemFromPlayer(info.staging_delta,
+      { toSlot = j - 1, fromSlot = item.slot, count = item.count }) end)
 end
 
 store()
