@@ -504,11 +504,15 @@ function Range:new(a, b)
   return r
 end
 
+function Range:to_list()
+    return range(self.a, self.b)
+end
+
 -- function Range:intersection(a, b)
 
 function List:foreach(f)
-  for _, x in self:iter() do
-    f(x)
+  for i, x in self:iter() do
+    f(x, i)
   end
 end
 
@@ -544,6 +548,10 @@ end
 
 function List:empty()
     return List:from({})
+end
+
+function List:slice(a, b)
+    return range(a, b):map(function (i) return self:get(i) end)
 end
 
 function cons(x, xs)
