@@ -1,4 +1,19 @@
+function furnace_index(i)
+  return vec.new(i % width, 1, (i // width) * 2 + 1)
+end
 
+width = 10
+height = 2
+pos = {
+  inputs = {},
+  fuel = {},
+  outputs = {}
+}
+fuel_limit = math.ceil(width * height * 3 * 1.5)
+
+function distribute_inputs()
+
+end
 
 function move_xyz(delta)
     print("following vector: " .. serialize_vector(delta))

@@ -133,7 +133,7 @@ end
 List = {}
 
 function List:new()
-    local l = { size = 0, data = {} }
+    local l = { size = 0, data = {}, type_ = "list" }
     setmetatable(l, self)
     self.__index = self
     return l
@@ -240,7 +240,7 @@ end
 Graph = {}
 
 function Graph:new(directed)
-    local g = { nodes = List:new(), edges = List:new(), directed = directed }
+    local g = { nodes = List:new(), edges = List:new(), directed = directed, type_ = "graph" }
     setmetatable(g, self)
     self.__index = self
     return g
@@ -308,7 +308,9 @@ end
 
 -- borrowed from https ://stackoverflow.com/a/27028488
 function dump(o)
-   if type(o) == 'table' then
+    if o.type_ == "list" then
+        return o:show()
+    elseif type(o) == 'table' then
       local s = '{ '
       for k,v in pairs(o) do
          if type(k) ~= 'number' then k = '"'..k..'"' end
@@ -413,6 +415,8 @@ function Graph:shortest_path(a, b)
   return recover_path(p, a, b)
 end
 
+VirtualChest = {}
+
 function VirtualChest:new(shape)
   assert(shape.dim.x == 1 or shape.dim.y == 1)
   local c = { shape = shape }
@@ -421,9 +425,27 @@ function VirtualChest:new(shape)
   return c
 end
 
+function VirtualChest:n_slots()
+    return self.shape.dim.x * self.shape.dim.y * self.shape.dim.z * 27 * 2
+end
+
+VChest = {}
+
+function VChest:new(chests)
+    assert(chests:length() ~= 0)
+    local c = { chests = chests }
+    setmetatable(c, self)
+    self.__index = self
+    return c
+end
+
+function VChest:n_slots()
+    return self.chests:length() * 27 * 2
+end
+
 function derive_eq(properties)
   return function (a, b)
-    return properties:all(function (i) a[i] == b[i] end)
+    return properties:all(function (i) return a[i] == b[i] end)
   end
 end
 
@@ -455,10 +477,18 @@ function Rect:bound_ranges()
   return Range(a.x, b.x), Range(a.y, b.y), Range(a.z, b.z)
 end
 
-function Rect:intersect(a, b)
-  local a_bounds = a.bound_ranges()
-  local b_bounds = b.bound_ranges()
-  return Rect:from_bounds(Range:intersection)
+-- function Rect:intersect(a, b)
+  -- local a_bounds = a.bound_ranges()
+  -- local b_bounds = b.bound_ranges()
+  -- return Rect:from_bounds(Range:intersection)
+-- end
+
+function Rect:blocks()
+    local xs, ys, zs = self:bound_ranges()
+    return List:product(List:from({xs:to_list(), ys:to_list(), zs:to_list()})):map(
+        function (v) return { x = v:get(1), y = v:get(2), z = v:get(3) } end
+    )
+end
 
 function Range:new(a, b)
   local r = {a = a, b = b}
@@ -467,7 +497,7 @@ function Range:new(a, b)
   return r
 end
 
-function Range:intersection(a, b)
+-- function Range:intersection(a, b)
 
 function List:foreach(f)
   for _, x in self:iter() do
@@ -476,40 +506,45 @@ function List:foreach(f)
 end
 
 function List:extend(xs)
-  return xs:foreach(self:append)
+  -- TODO
+  -- return xs:foreach(partial(self:append, self))
+  return xs:foreach(function (x) return self:append(x) end)
 end
 
 function List:concat_n(xs)
   local l = List:new()
-  xs:foreach(l:extend)
+  xs:foreach(function (x) return l:extend(x) end)
   return l
 end
 
-function VirtualChest:n_slots()
-  return self.shape.dim.x * self.shape.dim.y * self.shape.dim.z * 27 * 2
+function List:singleton(x)
+    return List:from({x})
 end
 
-function furnace_index(i)
-  return vec.new(i % width, 1, (i // width) * 2 + 1)
+function List:empty()
+    return List:from({})
 end
 
-width = 10
-height = 2
-pos = {
-  inputs = {},
-  fuel = {},
-  outputs = {}
-}
-fuel_limit = math.ceil(width * height * 3 * 1.5)
+function cons(x, xs)
+    local l = List:singleton(x)
+    l:extend(xs)
+    return l
+end
 
-function distribute_inputs()
-
+function List:product(xs)
+    if xs:length() == 0 then
+        -- return xs:map(List:singleton)
+        return List:singleton(List:empty())
+    else
+        return List:concat_n(xs:head():map(
+                function (a) return List:product(xs:tail()):map(
+                    function (b) return cons(a, b) end) end))
+    end
 end
 
 function table_size(t)
   return List:from(pairs(t)):length()
 end
 
-function table_product(t)
-  
-end
+-- function table_product(t)
+-- end
