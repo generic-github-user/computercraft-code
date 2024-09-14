@@ -1,3 +1,5 @@
+vec = vector
+
 function right(dig, n)
     turtle.turnRight()
     forward(dig, n)
@@ -271,7 +273,7 @@ function List:from(xs)
 end
 
 function List:show()
-  return self:join(", ")
+  return "[" .. self:join(", ") .. "]"
 end
 
 function List:filter(f)
@@ -308,9 +310,10 @@ end
 
 -- borrowed from https ://stackoverflow.com/a/27028488
 function dump(o)
-    if o.type_ == "list" then
-        return o:show()
-    elseif type(o) == 'table' then
+    if type(o) == 'table' then
+      if o.type_ == "list" then
+         return o:show()
+      end
       local s = '{ '
       for k,v in pairs(o) do
          if type(k) ~= 'number' then k = '"'..k..'"' end
@@ -449,6 +452,8 @@ function derive_eq(properties)
   end
 end
 
+Rect = {}
+
 function Rect:new(pos, dims)
   local r = { pos = pos, dims = dims }
   setmetatable(r, self)
@@ -458,7 +463,7 @@ function Rect:new(pos, dims)
 end
 
 function Rect:normalize()
-  local r = Rect(self.pos, self.dims)
+  local r = Rect:new(self.pos, self.dims)
   for _, a in List:from({"x", "y", "z"}):iter() do
     if r.dims[a] < 0 then
       r.pos[a] = r.pos[a] + r.dims[a] + 1
@@ -490,6 +495,8 @@ function Rect:blocks()
     )
 end
 
+Range = {}
+
 function Range:new(a, b)
   local r = {a = a, b = b}
   setmetatable(r, self)
@@ -503,6 +510,20 @@ function List:foreach(f)
   for _, x in self:iter() do
     f(x)
   end
+end
+
+function List:get(i)
+    return self.data[i]
+end
+
+function List:head()
+    return self:get(1)
+end
+
+function List:tail()
+    local r = List:new()
+    for i = 2, self:length() do r:append(self:get(i)) end
+    return r
 end
 
 function List:extend(xs)
@@ -545,6 +566,9 @@ end
 function table_size(t)
   return List:from(pairs(t)):length()
 end
+
+print(List:product(List:from({List:from({1, 2, 3}), List:from({6, 7, 8})})):show())
+-- print(Rect:new(vec.new(0, 0, 0), vec.new(2, 3, 4)):blocks():show())
 
 -- function table_product(t)
 -- end
