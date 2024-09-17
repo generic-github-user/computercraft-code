@@ -60,7 +60,9 @@ end
 -- end
 
 function VChest:address(slot)
-  return self.chests:get(math.floor(slot / (27 * 2)) + 1)
+  local chest_size = 27 * 2
+  -- vchest addresses are 0-based
+  return self.chests:get(math.floor(slot / chest_size) + 1), (slot % chest_size + 1)
 end
 
 function VChest:push(from, to, count)
@@ -69,7 +71,12 @@ function VChest:push(from, to, count)
 end
 
 function withTempSlot(f)
+  local chest = peripheral.find("minecraft:chest")
+  local occupied = chest.getItemDetail(1) ~= nil
+  if occupied then local tmp_count = chest.getItemDetail(1).count end
+
   if occupied then
+    print("temp slot occupied, performing swap")
     turtle.select(info.temp_slot)
     turtle.suck(tmp_count)
   end
@@ -82,15 +89,16 @@ function withTempSlot(f)
 end
 
 function pushItems(target, from, to, count)
+  print("moving " .. count .. " items from slot " .. from .. " to slot " .. to .. " @ " .. textutils.serialize(target))
   current_pos = travel(current_pos, target - vector.new(0, 1, 0))
   local chest = peripheral.find("minecraft:chest")
 
-  local tmp_count = chest.getItemDetail(1).count
-  local occupied = tmp_count > 0
+  -- local tmp_count = chest.getItemDetail(1).count
+  -- local occupied = tmp_count > 0
   return withTempSlot(function ()
     turtle.select(from)
     turtle.drop(count)
-    chest.pushItems(chest, 1, to, count) end)
+    chest.pushItems(peripheral.getName(chest), 1, count, to) end)
 end
 
 function suckItems(target, count, slot)
@@ -122,9 +130,18 @@ function store()
       { toSlot = j - 1, fromSlot = item.slot, count = item.count }) end)
 end
 
+function handle(f)
+  local success, err = pcall(f)
+  if not success then
+    current_pos = travel(current_pos, vector.new(0, 0, 0))
+  end
+  print(err)
+  return success, err
+end
+
 function main()
   -- pushItems(info.storage, 1, 17, 64)
-  info.storage:push(1, 17, 64)
+  -- handle(function () info.storage:push(1, 17, 64) end)
 
   peripheral.find("modem", rednet.open)
   assert(rednet.isOpen())
