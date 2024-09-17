@@ -27,8 +27,10 @@ info = {
   inv_peripheral = vector.new(0, 1, 0),
   staging = VChest:new(List:singleton(vector.new(0, 1, 1))),
   staging_delta = "up",
+  fuel_slot = 16,
   storage = VChest:new(Rect:new(vector.new(3, 1, 0), vector.new(6, 1, 2)):blocks()),
-  fuel = VChest:new(List:singleton(vector.new(-2, 1, 0)))
+  -- fuel = VChest:new(List:singleton(vector.new(-2, 1, 0)))
+  fuel = vector.new(-2, 1, 0)
 }
 current_pos = vector.new(0, 0, 0)
 
@@ -45,6 +47,15 @@ function List:call(f)
   return self
 end
 
+function VChest:take(count, slot)
+  turtle.select(slot)
+  local n = 0
+  -- while n < count do
+  -- for _, chest in self.chests:iter()
+  -- for _, i in self:slots():iter() do
+  -- TODO
+end
+
 function store()
   local inv = peripheral.find("inventoryManager")
   print(textutils.serialize(info.storage))
@@ -56,6 +67,7 @@ function store()
     :call(function (l) print("Transferring " .. l:length()
       .. " stacks from player inventory") end)
     :foreach(function (item, j)
+      -- TODO: pre-check that target chest is empty
       print(" - slot " .. item.slot .. ": moving " .. item.name .. " (" .. item.count .. ")")
       inv.removeItemFromPlayer(info.staging_delta,
       { toSlot = j - 1, fromSlot = item.slot, count = item.count }) end)
