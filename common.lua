@@ -495,6 +495,10 @@ function Rect:blocks()
     )
 end
 
+function Rect:blocks_vec()
+    return self:blocks():map(function (b) return vector.new(b.x, b.y, b.z) end)
+end
+
 Range = {}
 
 function Range:new(a, b)
