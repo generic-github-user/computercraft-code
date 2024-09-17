@@ -157,6 +157,13 @@ function List:findIf(f)
     return None()
 end
 
+function List:findIndexIf(f)
+  for i=1, self.size do
+    if f(self.data[i]) then return Some(i) end
+  end
+  return None()
+end
+
 function List:map(f)
     local l = List:new()
     for i=1, self.size do
@@ -301,6 +308,12 @@ function List:reverse()
   for i=self:length(),1,-1 do
     l:append(self.data[i])
   end
+  return l
+end
+
+function List:full(n, x)
+  local l = List:new()
+  for i=1, n do l:append(x) end
   return l
 end
 
@@ -524,6 +537,10 @@ function List:get(i)
     return self.data[i]
 end
 
+function List:set(i, x)
+  self.data[i] = x
+end
+
 function List:head()
     return self:get(1)
 end
@@ -556,6 +573,10 @@ end
 
 function List:slice(a, b)
     return range(a, b):map(function (i) return self:get(i) end)
+end
+
+function List:take(n)
+  return self:slice(1, math.min(n, self:length()))
 end
 
 function cons(x, xs)

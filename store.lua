@@ -10,7 +10,9 @@ end
 
 function travel(pos, target)
   -- return move_xyz(target - pos)
-  move_xyz(target - pos)
+  if pos ~= target then
+    move_xyz(target - pos)
+  end
   return target
 end
 
@@ -33,7 +35,8 @@ info = {
   storage = VChest:new(Rect:new(vector.new(3, 1, 0), vector.new(6, 1, 2)):blocks_vec()),
   -- fuel = VChest:new(List:singleton(vector.new(-2, 1, 0)))
   fuel = vector.new(-2, 1, 0),
-  fuel_limit = 200
+  fuel_limit = 200,
+  db_path = "./index"
 }
 current_pos = vector.new(0, 0, 0)
 
@@ -59,8 +62,13 @@ end
   -- TODO
 -- end
 
+function VChest:rangeError(i)
+  error("Index " .. i " out of range; must be between 0 and " .. self:n_slots() - 1)
+end
+
 function VChest:address(slot)
   local chest_size = 27 * 2
+  if slot < 0 or slot >= self:n_slots() then VChest:rangeError(slot) end
   -- vchest addresses are 0-based
   return self.chests:get(math.floor(slot / chest_size) + 1), (slot % chest_size + 1)
 end
@@ -101,6 +109,12 @@ function pushItems(target, from, to, count)
     chest.pushItems(peripheral.getName(chest), 1, count, to) end)
 end
 
+function getItems(target)
+  current_pos = travel(current_pos, target - vector.new(0, 1, 0))
+  local chest = peripheral.find("minecraft:chest")
+  return List:from(chest.list()) -- TODO: make sure sparse indices don't fuck this up
+end
+
 function suckItems(target, count, slot)
   current_pos = travel(current_pos, target - vector.new(0, 1, 0))
   turtle.select(slot)
@@ -111,6 +125,49 @@ function refuel()
   local n = math.ceil(info.fuel_limit / 80) + 1
   assert(suckItems(info.fuel_pos, n, info.fuel_slot))
   assert(turtle.refuel(n))
+end
+
+function stackSize(slot)
+  return turtle.getItemCount(slot) + turtle.getItemSpace(slot)
+end
+
+function store_stack(index, slot)
+  -- TODO: refactor with takeWhile or some such
+  local n = turtle.getItemCount(slot)
+  -- local targets = List:new()
+  -- for _, i in range(0, storage:n_slots() - 1):iter() do
+  --   local x = index:get(i + 1)
+  --   if x == nil or x.count 
+  local details = turtle.getItemDetail(slot)
+  while n > 0 do
+    local target = index:findIndexIf(function (item)
+      return item == nil or item.count < stackSize(slot) end)
+    if not target.some then return false end
+    target = unwrap(target)
+
+    local currentSize = index:get(target).count
+    local m = math.min(n, stackSize(slot) - (currentSize or 0))
+    storage:push(slot, target - 1, m)
+    -- if index:get(target) == nil then
+    index:set(target, { name = details.name, count = currentSize + m })
+    n = n - m
+  end
+  write_text(db_path, textutils.serialize(index))
+  return true
+end
+
+function read_text(path)
+  local f = fs.open(path, "r")
+  local content = f:read("*all") -- /shrug
+  f:close()
+  return content
+end
+
+function write_text(path, content)
+  local f = fs.open(path, "w")
+  local r = f:write(content)
+  f:close()
+  return r
 end
 
 function store()
@@ -128,6 +185,13 @@ function store()
       print(" - slot " .. item.slot .. ": moving " .. item.name .. " (" .. item.count .. ")")
       inv.removeItemFromPlayer(info.staging_delta,
       { toSlot = j - 1, fromSlot = item.slot, count = item.count }) end)
+
+  if fs.exists(db_path) then
+    assert(not fs.isDir(db_path))
+    local index = textutils.unserialize(read_text(db_path))
+  else
+    local index = List:full(storage:n_slots(), nil)
+  end
 end
 
 function handle(f)
