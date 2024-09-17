@@ -96,6 +96,16 @@ function withTempSlot(f)
   return r
 end
 
+-- function dropItems(slot, count)
+--   turtle.select(slot)
+--   return turtle.drop(count)
+-- end
+
+-- function suckItems(slot, count)
+--   turtle.select(slot)
+--   return turtle.suck(count)
+-- end
+
 function pushItems(target, from, to, count)
   print("moving " .. count .. " items from slot " .. from .. " to slot " .. to .. " @ " .. textutils.serialize(target))
   current_pos = travel(current_pos, target - vector.new(0, 1, 0))
@@ -103,16 +113,41 @@ function pushItems(target, from, to, count)
 
   -- local tmp_count = chest.getItemDetail(1).count
   -- local occupied = tmp_count > 0
-  return withTempSlot(function ()
-    turtle.select(from)
-    turtle.drop(count)
-    chest.pushItems(peripheral.getName(chest), 1, count, to) end)
+  if to == 1 then
+    return dropItems(target, from, count)
+  else
+    return withTempSlot(function ()
+      dropItems(target, from, count)
+      chest.pushItems(peripheral.getName(chest), 1, count, to) end)
+  end
+end
+
+function pullItems(target, from, to, count)
+  current_pos = travel(current_pos, target - vector.new(0, 1, 0))
+  local chest = peripheral.find("minecraft:chest")
+  if count == nil then count = chest.getItemDetail(from).count end
+  if from == 1 then
+    return suckItems(target, to, count)
+  else
+    return withTempSlot(function ()
+      chest.pushItems(peripheral.getName(chest), from, count, 1)
+      suckItems(target, to, count)
+    end)
+  end
 end
 
 function getItems(target)
   current_pos = travel(current_pos, target - vector.new(0, 1, 0))
   local chest = peripheral.find("minecraft:chest")
   return List:from(chest.list()) -- TODO: make sure sparse indices don't fuck this up
+end
+
+nonEmpty = function (item) return item ~= nil and item.count > 0 end
+
+function dropItems(target, count, slot)
+  current_pos = travel(current_pos, target - vector.new(0, 1, 0))
+  turtle.select(slot)
+  return turtle.drop(count)
 end
 
 function suckItems(target, count, slot)
@@ -132,6 +167,7 @@ function stackSize(slot)
 end
 
 function store_stack(index, slot)
+  if turtle.getFuelLevel() < info.fuel_limit then refuel() end
   -- TODO: refactor with takeWhile or some such
   local n = turtle.getItemCount(slot)
   -- local targets = List:new()
@@ -141,18 +177,22 @@ function store_stack(index, slot)
   local details = turtle.getItemDetail(slot)
   while n > 0 do
     local target = index:findIndexIf(function (item)
-      return item == nil or item.count < stackSize(slot) end)
+      return item == nil or (item.name == details.name and item.count < stackSize(slot)) end)
     if not target.some then return false end
     target = unwrap(target)
 
-    local currentSize = index:get(target).count
-    local m = math.min(n, stackSize(slot) - (currentSize or 0))
-    storage:push(slot, target - 1, m)
+    -- TODO: bleh
+    local currentSize = index:get(target)
+    if currentSize ~= nil then currentSize = currentSize.count
+    else currentSize = 0 end
+
+    local m = math.min(n, stackSize(slot) - currentSize)
+    info.storage:push(slot, target - 1, m)
     -- if index:get(target) == nil then
     index:set(target, { name = details.name, count = currentSize + m })
     n = n - m
   end
-  write_text(db_path, textutils.serialize(index))
+  write_text(info.db_path, textutils.serialize(index))
   return true
 end
 
@@ -186,11 +226,18 @@ function store()
       inv.removeItemFromPlayer(info.staging_delta,
       { toSlot = j - 1, fromSlot = item.slot, count = item.count }) end)
 
-  if fs.exists(db_path) then
-    assert(not fs.isDir(db_path))
-    local index = textutils.unserialize(read_text(db_path))
+  local index = nil
+  if fs.exists(info.db_path) then
+    assert(not fs.isDir(info.db_path))
+    index = textutils.unserialize(read_text(info.db_path))
   else
-    local index = List:full(storage:n_slots(), nil)
+    index = List:full(info.storage:n_slots(), nil)
+  end
+  
+  -- TODO: grab multiple (probably 12) stacks at once
+  while getItems(info.staging):any(nonEmpty) do
+    pullItems(info.staging, unwrap(getItems(info.staging):findIndexIf(nonEmpty)), 1, nil)
+    store_stack(index, 1)
   end
 end
 
@@ -210,11 +257,16 @@ function main()
   peripheral.find("modem", rednet.open)
   assert(rednet.isOpen())
   while true do
-    id, message = rednet.receive()
     if turtle.getFuelLevel() < info.fuel_limit then refuel() end
-    if message == "store" then store() end
+    id, message = rednet.receive()
+    if message == "store" then
+      local s, e = handle(store)
+      if not s then break end
+    end
     sleep(1)
   end
 end
 
 main()
+
+-- tmp
