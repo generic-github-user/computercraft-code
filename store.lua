@@ -57,10 +57,10 @@ function VChest:take(count, slot)
 end
 
 function store()
-  local inv = peripheral.find("inventoryManager")
   print(textutils.serialize(info.storage))
 
   current_pos = travel(current_pos, info.inv_peripheral - vector.new(0, 1, 0))
+  local inv = peripheral.find("inventoryManager")
   player_items(inv)
     :filter(function (i) return i.slot >= 9 and i.slot <= 36 end)
     :filter(function (i) return i.count > 0 end)
@@ -73,4 +73,16 @@ function store()
       { toSlot = j - 1, fromSlot = item.slot, count = item.count }) end)
 end
 
-store()
+function main()
+  peripheral.find("modem", rednet.open)
+  assert(rednet.isOpen())
+  while true do
+    id, message = rednet.receive()
+    if message == "store" then
+      store()
+    end
+    sleep(1)
+  end
+end
+
+main()
