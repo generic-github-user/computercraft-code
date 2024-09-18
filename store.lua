@@ -180,11 +180,13 @@ function store_stack(index, slot)
   --   local x = index:get(i + 1)
   --   if x == nil or x.count 
   local details = turtle.getItemDetail(slot)
+  print(textutils.serialize(details))
   while n > 0 do
     local target = index:findIndexIf(function (item)
-      return item == nil or (item.name == details.name and item.count < stackSize(slot)) end)
+      return item == nil or (item.name == details.name and item.nbt == details.nbt and item.count < stackSize(slot)) end)
     if not target.some then return false end
     target = unwrap(target)
+    print("found open slot: " .. target)
 
     -- TODO: bleh
     local currentSize = index:get(target)
@@ -194,7 +196,7 @@ function store_stack(index, slot)
     local m = math.min(n, stackSize(slot) - currentSize)
     info.storage:push(slot, target - 1, m)
     -- if index:get(target) == nil then
-    index:set(target, { name = details.name, count = currentSize + m })
+    index:set(target, { name = details.name, nbt = details.serialize, count = currentSize + m })
     n = n - m
   end
   write_text(info.db_path, index:serialize())

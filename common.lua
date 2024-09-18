@@ -158,7 +158,7 @@ function List:findIf(f)
 end
 
 function List:findIndexIf(f)
-  for i=1, self.size do
+  for i=1, self:length() do
     if f(self.data[i]) then return Some(i) end
   end
   return None()
