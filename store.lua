@@ -34,7 +34,7 @@ info = {
   fuel_slot = 16,
   storage = VChest:new(Rect:new(vector.new(3, 1, 0), vector.new(6, 1, 2)):blocks_vec()),
   -- fuel = VChest:new(List:singleton(vector.new(-2, 1, 0)))
-  fuel = vector.new(-2, 1, 0),
+  fuel_pos = vector.new(-2, 1, 0),
   fuel_limit = 200,
   db_path = "./index"
 }
@@ -107,7 +107,7 @@ end
 -- end
 
 function pushItems(target, from, to, count)
-  print("moving " .. count .. " items from slot " .. from .. " to slot " .. to .. " @ " .. textutils.serialize(target))
+  print("moving " .. (count or "") .. " items from slot " .. from .. " (local) to slot " .. to .. " (remote) @ " .. textutils.serialize(target))
   current_pos = travel(current_pos, target - vector.new(0, 1, 0))
   local chest = peripheral.find("minecraft:chest")
 
@@ -123,6 +123,7 @@ function pushItems(target, from, to, count)
 end
 
 function pullItems(target, from, to, count)
+  print("moving " .. (count or "") .. " items from slot " .. from .. " (remote) to slot " .. to .. " (local) @ " .. textutils.serialize(target))
   current_pos = travel(current_pos, target - vector.new(0, 1, 0))
   local chest = peripheral.find("minecraft:chest")
   if count == nil then count = chest.getItemDetail(from).count end
@@ -144,13 +145,13 @@ end
 
 nonEmpty = function (item) return item ~= nil and item.count > 0 end
 
-function dropItems(target, count, slot)
+function dropItems(target, slot, count)
   current_pos = travel(current_pos, target - vector.new(0, 1, 0))
   turtle.select(slot)
   return turtle.drop(count)
 end
 
-function suckItems(target, count, slot)
+function suckItems(target, slot, count)
   current_pos = travel(current_pos, target - vector.new(0, 1, 0))
   turtle.select(slot)
   return turtle.suck(count)
@@ -167,6 +168,7 @@ function stackSize(slot)
 end
 
 function store_stack(index, slot)
+  print("Storing stack from slot " .. slot)
   if turtle.getFuelLevel() < info.fuel_limit then refuel() end
   -- TODO: refactor with takeWhile or some such
   local n = turtle.getItemCount(slot)
@@ -197,14 +199,14 @@ function store_stack(index, slot)
 end
 
 function read_text(path)
-  local f = fs.open(path, "r")
+  local f = assert(io.open(path, "r"))
   local content = f:read("*all") -- /shrug
   f:close()
   return content
 end
 
 function write_text(path, content)
-  local f = fs.open(path, "w")
+  local f = assert(io.open(path, "w"))
   local r = f:write(content)
   f:close()
   return r
@@ -239,6 +241,8 @@ function store()
     pullItems(info.staging, unwrap(getItems(info.staging):findIndexIf(nonEmpty)), 1, nil)
     store_stack(index, 1)
   end
+  print(getItems(info.staging):length())
+  current_pos = travel(current_pos, vector.new(0, 0, 0))
 end
 
 function handle(f)
