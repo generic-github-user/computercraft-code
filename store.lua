@@ -140,7 +140,7 @@ end
 function getItems(target)
   current_pos = travel(current_pos, target - vector.new(0, 1, 0))
   local chest = peripheral.find("minecraft:chest")
-  return List:from(chest.list()) -- TODO: make sure sparse indices don't fuck this up
+  return List:from(chest.list(), 27) -- TODO: make sure sparse indices don't fuck this up
 end
 
 nonEmpty = function (item) return item ~= nil and item.count > 0 end
@@ -194,7 +194,7 @@ function store_stack(index, slot)
     index:set(target, { name = details.name, count = currentSize + m })
     n = n - m
   end
-  write_text(info.db_path, textutils.serialize(index))
+  write_text(info.db_path, index:serialize())
   return true
 end
 
@@ -210,6 +210,15 @@ function write_text(path, content)
   local r = f:write(content)
   f:close()
   return r
+end
+
+function List:serialize()
+  return textutils.serialize(self)
+end
+
+function List:deserialize(text)
+  local data = textutils.unserialize(text)
+  return List:from(data.data, data.size)
 end
 
 function store()
@@ -231,7 +240,7 @@ function store()
   local index = nil
   if fs.exists(info.db_path) then
     assert(not fs.isDir(info.db_path))
-    index = textutils.unserialize(read_text(info.db_path))
+    index = List:deserialize(read_text(info.db_path))
   else
     index = List:full(info.storage:n_slots(), nil)
   end

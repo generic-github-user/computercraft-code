@@ -190,6 +190,10 @@ function List:any(f)
     return false
 end
 
+-- function invert(f)
+
+-- List:none = invert(List:any)
+
 function List:iter()
     return ipairs(self.data)
 end
@@ -271,12 +275,19 @@ function Graph:show()
   return self.nodes:show() .. "\n\n" .. self.edges:show()
 end
 
-function List:from(xs)
-  local l = List:new()
-  for _, x in ipairs(xs) do
-    l:append(x)
+function List:from(xs, n)
+  -- TODO
+  if n == nil then
+    local l = List:new()
+    for _, x in ipairs(xs) do
+      l:append(x)
+    end
+    return l
+  else
+    local l = List:full(n, nil)
+    for i=1, n do l:set(i, xs[i]) end
+    return l
   end
-  return l
 end
 
 function List:show()
