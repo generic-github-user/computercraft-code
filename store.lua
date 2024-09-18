@@ -78,20 +78,22 @@ function VChest:push(from, to, count)
   return pushItems(chest_pos, from, slot, count)
 end
 
-function withTempSlot(f)
+function withTempSlot(target, f)
   local chest = peripheral.find("minecraft:chest")
   local occupied = chest.getItemDetail(1) ~= nil
   if occupied then local tmp_count = chest.getItemDetail(1).count end
 
   if occupied then
     print("temp slot occupied, performing swap")
-    turtle.select(info.temp_slot)
-    turtle.suck(tmp_count)
+    suckItems(target, info.temp_slot, tmp_count)
+    -- turtle.select(info.temp_slot)
+    -- turtle.suck(tmp_count)
   end
   local r = f()
   if occupied then
-    turtle.select(info.temp_slot)
-    turtle.drop(tmp_count)
+    dropItems(target, info.temp_slot, tmp_count)
+    -- turtle.select(info.temp_slot)
+    -- turtle.drop(tmp_count)
   end
   return r
 end
@@ -116,7 +118,7 @@ function pushItems(target, from, to, count)
   if to == 1 then
     return dropItems(target, from, count)
   else
-    return withTempSlot(function ()
+    return withTempSlot(target, function ()
       dropItems(target, from, count)
       assert(chest.pushItems(peripheral.getName(chest), 1, count, to) == count)
     end)
@@ -131,7 +133,7 @@ function pullItems(target, from, to, count)
   if from == 1 then
     return suckItems(target, to, count)
   else
-    return withTempSlot(function ()
+    return withTempSlot(target, function ()
       assert(chest.pushItems(peripheral.getName(chest), from, count, 1) == count)
       suckItems(target, to, count)
     end)
