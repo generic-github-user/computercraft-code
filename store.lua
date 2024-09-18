@@ -63,12 +63,12 @@ end
 -- end
 
 function VChest:rangeError(i)
-  error("Index " .. i " out of range; must be between 0 and " .. self:n_slots() - 1)
+  error("Index " .. i .. " out of range; must be between 0 and " .. self:n_slots() - 1)
 end
 
 function VChest:address(slot)
   local chest_size = 27 * 2
-  if slot < 0 or slot >= self:n_slots() then VChest:rangeError(slot) end
+  if slot < 0 or slot >= self:n_slots() then self:rangeError(slot) end
   -- vchest addresses are 0-based
   return self.chests:get(math.floor(slot / chest_size) + 1), (slot % chest_size + 1)
 end
@@ -118,7 +118,8 @@ function pushItems(target, from, to, count)
   else
     return withTempSlot(function ()
       dropItems(target, from, count)
-      chest.pushItems(peripheral.getName(chest), 1, count, to) end)
+      assert(chest.pushItems(peripheral.getName(chest), 1, count, to) == count)
+    end)
   end
 end
 
@@ -131,7 +132,7 @@ function pullItems(target, from, to, count)
     return suckItems(target, to, count)
   else
     return withTempSlot(function ()
-      chest.pushItems(peripheral.getName(chest), from, count, 1)
+      assert(chest.pushItems(peripheral.getName(chest), from, count, 1) == count)
       suckItems(target, to, count)
     end)
   end
