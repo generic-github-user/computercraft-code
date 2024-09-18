@@ -32,10 +32,11 @@ info = {
   staging_delta = "up",
   temp_slot = 15,
   fuel_slot = 16,
-  storage = VChest:new(Rect:new(vector.new(3, 1, 0), vector.new(6, 1, 2)):blocks_vec()),
+  -- storage = VChest:new(Rect:new(vector.new(3, 1, 0), vector.new(6, 1, 2)):blocks_vec()),
+  storage = VChest:new(Rect:new(vector.new(2, 1, 0), vector.new(16, 1, 4)):blocks_vec()),
   -- fuel = VChest:new(List:singleton(vector.new(-2, 1, 0)))
   fuel_pos = vector.new(-2, 1, 0),
-  fuel_limit = 200,
+  fuel_limit = 400,
   db_path = "./index"
 }
 current_pos = vector.new(0, 0, 0)
@@ -162,7 +163,7 @@ end
 
 function refuel()
   local n = math.ceil(info.fuel_limit / 80) + 1
-  assert(suckItems(info.fuel_pos, n, info.fuel_slot))
+  assert(suckItems(info.fuel_pos, info.fuel_slot, n))
   assert(turtle.refuel(n))
 end
 
@@ -196,10 +197,10 @@ function store_stack(index, slot)
     local m = math.min(n, stackSize(slot) - currentSize)
     info.storage:push(slot, target - 1, m)
     -- if index:get(target) == nil then
-    index:set(target, { name = details.name, nbt = details.serialize, count = currentSize + m })
+    index:set(target, { name = details.name, nbt = details.nbt, count = currentSize + m })
     n = n - m
+    write_text(info.db_path, index:serialize())
   end
-  write_text(info.db_path, index:serialize())
   return true
 end
 
@@ -252,8 +253,12 @@ function store()
   
   -- TODO: grab multiple (probably 12) stacks at once
   while getItems(info.staging):any(nonEmpty) do
-    pullItems(info.staging, unwrap(getItems(info.staging):findIndexIf(nonEmpty)), 1, nil)
-    store_stack(index, 1)
+    while getItems(info.staging):any(nonEmpty) and not range(1, 12):all(isOccupied) do
+      pullItems(info.staging, unwrap(getItems(info.staging):findIndexIf(nonEmpty)), 1, nil)
+    end
+    for _, i in range(1, 12):filter(isOccupied):iter() do
+      store_stack(index, i)
+    end
   end
   print(getItems(info.staging):length())
   current_pos = travel(current_pos, vector.new(0, 0, 0))
@@ -288,3 +293,4 @@ end
 main()
 
 -- tmp
+-- TODO: add more safety checks
