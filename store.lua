@@ -313,8 +313,7 @@ function disambiguate(name)
       :unique()
       :filter(function (item) return string_contains(item, name) end)
     if matches:length() > 1 then
-      print("{" .. name .. "} is ambiguous; the following items all match: " .. matches:show())
-      return
+      error("{" .. name .. "} is ambiguous; the following items all match: " .. matches:show())
     end
     -- if matches:length() > 1 then error("") end
     real_name = matches:head()
@@ -357,6 +356,11 @@ function fetch(name, count)
   return true
 end
 
+function count(name)
+  local name_ = disambiguate(name)
+  return index:filter(function (item) return item ~= nil and item.name == name_ end):map(getattr("count")):sum()
+end
+
 function handle(f)
   local success, err = pcall(f)
   if not success then
@@ -385,19 +389,22 @@ function main()
     if turtle.getFuelLevel() < info.fuel_limit then refuel() end
     id, message = rednet.receive()
     local request = textutils.unserialize(message)
-    local s, e
+    local s, r
     if request.name == "store" then
-      s, e = handle(store)
-      if not s then break end
+      s, r = handle(store)
     elseif request.name == "get" then
-      s, e = handle(function () return fetch(request.args.name, request.args.count) end)
-      if not s then break end
+      s, r = handle(function () return fetch(request.args.name, request.args.count) end)
+    elseif request.name == "count" then
+      s, r = handle(function () return count(request.args.name) end)
     else
       error("command not recognized")
     end
     local response = { type_ = "response" }
-    if s then response.content = "operation completed successfully"
-    else response.content = "operation failed: " .. e
+    if s then
+      response.content = "operation completed successfully: \n" .. r
+    else
+      response.content = "operation failed: \n" .. r
+      break
     end
     rednet.broadcast(textutils.serialize(response))
     sleep(1)

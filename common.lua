@@ -605,6 +605,14 @@ function List:take(n)
   return self:slice(1, math.min(n, self:length()))
 end
 
+function List:sum()
+  local n = 0
+  for _, x in self:iter() do
+    n = n + x
+  end
+  return n
+end
+
 function cons(x, xs)
     local l = List:singleton(x)
     l:extend(xs)

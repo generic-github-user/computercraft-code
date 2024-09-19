@@ -12,6 +12,11 @@ elseif args[1] == "get" then
         type_ = "request",
         name = "get",
         args = { name = args[2], count = tonumber(args[3]) } }
+elseif args[1] == "count" then
+    message = {
+        type_ = "request",
+        name = "count",
+        args = { name = args[2] } }
 end
 
 rednet.broadcast(textutils.serialize(message))
