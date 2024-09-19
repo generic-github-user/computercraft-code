@@ -74,6 +74,11 @@ function VChest:address(slot)
   return self.chests:get(math.floor(slot / chest_size) + 1), (slot % chest_size + 1)
 end
 
+function VChest:pull(from, to, count)
+  local chest_pos, slot = self:address(from)
+  return pullItems(chest_pos, slot, to, count)
+end
+
 function VChest:push(from, to, count)
   local chest_pos, slot = self:address(to)
   return pushItems(chest_pos, from, slot, count)
@@ -148,14 +153,17 @@ function getItems(target)
 end
 
 nonEmpty = function (item) return item ~= nil and item.count > 0 end
+isEmpty = function (i) return turtle.getItemCount(i) == 0 end
 
 function dropItems(target, slot, count)
+  if count == nil then count = turtle.getItemCount(slot) end
   current_pos = travel(current_pos, target - vector.new(0, 1, 0))
   turtle.select(slot)
   return turtle.drop(count)
 end
 
 function suckItems(target, slot, count)
+  if count == nil then count = turtle.getItemCount(slot) end
   current_pos = travel(current_pos, target - vector.new(0, 1, 0))
   turtle.select(slot)
   return turtle.suck(count)
@@ -199,9 +207,13 @@ function store_stack(index, slot)
     -- if index:get(target) == nil then
     index:set(target, { name = details.name, nbt = details.nbt, count = currentSize + m })
     n = n - m
-    write_text(info.db_path, index:serialize())
+    save_index()
   end
   return true
+end
+
+function save_index()
+  return write_text(info.db_path, index:serialize())
 end
 
 function read_text(path)
@@ -242,14 +254,6 @@ function store()
       print(" - slot " .. item.slot .. ": moving " .. item.name .. " (" .. item.count .. ")")
       inv.removeItemFromPlayer(info.staging_delta,
       { toSlot = j - 1, fromSlot = item.slot, count = item.count }) end)
-
-  local index = nil
-  if fs.exists(info.db_path) then
-    assert(not fs.isDir(info.db_path))
-    index = List:deserialize(read_text(info.db_path))
-  else
-    index = List:full(info.storage:n_slots(), nil)
-  end
   
   -- TODO: grab multiple (probably 12) stacks at once
   while getItems(info.staging):any(nonEmpty) do
@@ -264,9 +268,65 @@ function store()
   current_pos = travel(current_pos, vector.new(0, 0, 0))
 end
 
+function string_contains(a, b)
+  local start, stop = string.find(a, b)
+  return a ~= nil
+end
+
+function List:unique()
+  local s = {}
+  local l = List:new()
+  for _, i in self:iter() do
+    if not s[i] then l:append(i) end
+    s[i] = true
+  end
+  return l
+end
+
+function getattr(name)
+  return (function (x) return x[name] end)
+end
+
+-- TODO: clean this up.....
+function fetch(name, count)
+  assert(count >= 0)
+  -- local matches = index:map(function (item) return item.name end)
+  local matches = index:map(getattr("name"))
+    :unique()
+    :filter(function (item) return string_contains(item, name) end)
+  if matches:length() > 1 then error("{" .. name .. "} is ambiguous; the following items all match: " ..
+    matches:map(function (item) return item.name end):show()) end
+  local real_name = matches:head()
+
+  while count > 0 do
+    while count > 0 and not range(1, 12):all(isOccupied) do
+      local slot = unwrap(index:findIndexIf(function (item) return item.name == real_name end))
+      local item = index:get(slot)
+      local n = math.min(item.count, count)
+      -- info.storage:pull(slot - 1, unwrap(range(1, 12):findIf(isEmpty)), n)
+      info.storage:pull(slot - 1, 1, n)
+
+      if n == item.count then index:set(slot, nil)
+      else index:set(slot, { name = item.name, nbt = item.nbt, count = item.count - n }) end
+      save_index()
+
+      count = count - n
+    end
+    range(1, 12):filter(isOccupied):foreach(function (i) dropItems(info.staging, i, nil) end)
+  end
+
+  local contents = getItems(info.staging)
+  current_pos = travel(current_pos, info.inv_peripheral - vector.new(0, 1, 0))
+  local inv = peripheral.find("inventoryManager")
+  for slot, item in contents:iter() do -- TODO
+    if item ~= nil then inv.addItemToPlayer(info.staging_delta, { slot = slot, count = item.count }) end
+  end
+end
+
 function handle(f)
   local success, err = pcall(f)
   if not success then
+    save_index()
     current_pos = travel(current_pos, vector.new(0, 0, 0))
   end
   print(err)
@@ -274,6 +334,14 @@ function handle(f)
 end
 
 function main()
+  index = nil
+  if fs.exists(info.db_path) then
+    assert(not fs.isDir(info.db_path))
+    index = List:deserialize(read_text(info.db_path))
+  else
+    index = List:full(info.storage:n_slots(), nil)
+  end
+
   -- pushItems(info.storage, 1, 17, 64)
   -- handle(function () info.storage:push(1, 17, 64) end)
 
@@ -282,9 +350,15 @@ function main()
   while true do
     if turtle.getFuelLevel() < info.fuel_limit then refuel() end
     id, message = rednet.receive()
-    if message == "store" then
+    local request = textutils.unserialize(message)
+    if request.name == "store" then
       local s, e = handle(store)
       if not s then break end
+    elseif request.name == "get" then
+      local s, e = handle(function () return fetch(request.args.name, request.args.count) end)
+      if not s then break end
+    else
+      error("command not recognized")
     end
     sleep(1)
   end
