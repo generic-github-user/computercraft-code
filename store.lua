@@ -276,6 +276,7 @@ function store()
   end
   print(getItems(info.staging):length())
   current_pos = travel(current_pos, vector.new(0, 0, 0))
+  return true
 end
 
 function string_contains(a, b)
@@ -301,10 +302,7 @@ function nonNil(x)
   return x ~= nil
 end
 
--- TODO: clean this up.....
-function fetch(name, count)
-  print("Getting " .. count .. "x " .. name .. "...")
-  assert(count >= 0)
+function disambiguate(name)
   -- local matches = index:map(function (item) return item.name end)
   local names = index:filter(nonNil):map(getattr("name"))
   local real_name = ""
@@ -323,6 +321,14 @@ function fetch(name, count)
   end
   print(index:filter(nonNil):length())
   print(real_name)
+  return real_name
+end
+
+-- TODO: clean this up.....
+function fetch(name, count)
+  print("Getting " .. count .. "x " .. name .. "...")
+  assert(count >= 0)
+  local real_name = disambiguate(name)
 
   while count > 0 do
     while count > 0 and not range(1, 12):all(isOccupied) do
@@ -347,6 +353,8 @@ function fetch(name, count)
   for slot, item in contents:iter() do -- TODO
     if item ~= nil then inv.addItemToPlayer(info.staging_delta, { slot = slot, count = item.count }) end
   end
+  current_pos = travel(current_pos, vector.new(0, 0, 0))
+  return true
 end
 
 function handle(f)
@@ -377,15 +385,21 @@ function main()
     if turtle.getFuelLevel() < info.fuel_limit then refuel() end
     id, message = rednet.receive()
     local request = textutils.unserialize(message)
+    local s, e
     if request.name == "store" then
-      local s, e = handle(store)
+      s, e = handle(store)
       if not s then break end
     elseif request.name == "get" then
-      local s, e = handle(function () return fetch(request.args.name, request.args.count) end)
+      s, e = handle(function () return fetch(request.args.name, request.args.count) end)
       if not s then break end
     else
       error("command not recognized")
     end
+    local response = { type_ = "response" }
+    if s then response.content = "operation completed successfully"
+    else response.content = "operation failed: " .. e
+    end
+    rednet.broadcast(textutils.serialize(response))
     sleep(1)
   end
 end
