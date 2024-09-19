@@ -306,16 +306,21 @@ function fetch(name, count)
   print("Getting " .. count .. "x " .. name .. "...")
   assert(count >= 0)
   -- local matches = index:map(function (item) return item.name end)
-  local matches = index:filter(nonNil)
-    :map(getattr("name"))
-    :unique()
-    :filter(function (item) return string_contains(item, name) end)
-  if matches:length() > 1 then
-    print("{" .. name .. "} is ambiguous; the following items all match: " .. matches:show())
-    return
+  local names = index:filter(nonNil):map(getattr("name"))
+  local real_name = ""
+  if names:contains(name) then
+    real_name = name
+  else
+    local matches = names
+      :unique()
+      :filter(function (item) return string_contains(item, name) end)
+    if matches:length() > 1 then
+      print("{" .. name .. "} is ambiguous; the following items all match: " .. matches:show())
+      return
+    end
+    -- if matches:length() > 1 then error("") end
+    real_name = matches:head()
   end
-  -- if matches:length() > 1 then error("") end
-  local real_name = matches:head()
   print(index:filter(nonNil):length())
   print(real_name)
 

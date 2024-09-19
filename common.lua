@@ -573,6 +573,10 @@ function List:tail()
     return r
 end
 
+function List:contains(x)
+  return self:any(function (y) return x == y end)
+end
+
 function List:extend(xs)
   -- TODO
   -- return xs:foreach(partial(self:append, self))
