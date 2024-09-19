@@ -74,6 +74,11 @@ function VChest:address(slot)
   return self.chests:get(math.floor(slot / chest_size) + 1), (slot % chest_size + 1)
 end
 
+function VChest:getSlot(i)
+  local chest_pos, slot = self:address(i)
+  return getSlot(chest_pos, slot)
+end
+
 function VChest:pull(from, to, count)
   print("pull: " .. from .. " " .. to .. " " .. count)
   local chest_pos, slot = self:address(from)
@@ -154,6 +159,12 @@ function pullItems(target, from, to, count, expect)
       suckItems(target, to, count)
     end)
   end
+end
+
+function getSlot(target, i)
+  current_pos = travel(current_pos, target - vector.new(0, 1, 0))
+  local chest = peripheral.find("minecraft:chest")
+  return chest.getItemDetail(i)
 end
 
 function getItems(target)
@@ -328,6 +339,9 @@ function fetch(name, count)
   print("Getting " .. count .. "x " .. name .. "...")
   assert(count >= 0)
   local real_name = disambiguate(name)
+  if count > count_item(real_name) then
+    error("insufficient capacity -- requested " .. count .. " items, only " .. count_item(real_name) .. " present in storage")
+  end
 
   while count > 0 do
     while count > 0 and not range(1, 12):all(isOccupied) do
@@ -356,10 +370,14 @@ function fetch(name, count)
   return true
 end
 
+function count_item(name)
+  return index:filter(function (item) return item ~= nil and item.name == name end):map(getattr("count")):sum()
+end
+
 function count(name)
   local s, name_ = pcall(disambiguate, name)
   if not s then error(name_) end -- ???
-  return index:filter(function (item) return item ~= nil and item.name == name_ end):map(getattr("count")):sum()
+  return count_item(name_)
 end
 
 function handle(f, ...)
@@ -378,7 +396,9 @@ function main()
     assert(not fs.isDir(info.db_path))
     index = List:deserialize(read_text(info.db_path))
   else
-    index = List:full(info.storage:n_slots(), nil)
+    print("rebuilding index...")
+    -- index = List:full(info.storage:n_slots(), nil)
+    index = range(0, info.storage:n_slots() - 1):map(function (i) return info.storage:getSlot(i) end) -- ?
   end
 
   -- pushItems(info.storage, 1, 17, 64)
