@@ -75,13 +75,14 @@ function VChest:address(slot)
 end
 
 function VChest:pull(from, to, count)
+  print("pull: " .. from .. " " .. to .. " " .. count)
   local chest_pos, slot = self:address(from)
-  return pullItems(chest_pos, slot, to, count, index:get(from))
+  return pullItems(chest_pos, slot, to, count, index:get(from + 1))
 end
 
 function VChest:push(from, to, count)
   local chest_pos, slot = self:address(to)
-  return pushItems(chest_pos, from, slot, count, index:get(to))
+  return pushItems(chest_pos, from, slot, count, index:get(to + 1))
 end
 
 function withTempSlot(target, f)
@@ -142,6 +143,8 @@ function pullItems(target, from, to, count, expect)
   current_pos = travel(current_pos, target - vector.new(0, 1, 0))
   local chest = peripheral.find("minecraft:chest")
   if count == nil then count = chest.getItemDetail(from).count end
+  print("expecting: " .. textutils.serialize(expect))
+  -- print("found: " .. textutils.serialize(chest.getItemDetail(from)))
   assert(expect == nil or item_eq(chest.getItemDetail(from), expect))
   if from == 1 then
     return suckItems(target, to, count)
