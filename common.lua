@@ -194,8 +194,19 @@ end
 
 -- List:none = invert(List:any)
 
+function sparseListIterator(list, length)
+  local index = 0
+  return function()
+      index = index + 1
+      if index <= length then
+          return index, list[index]
+      end
+  end
+end
+
 function List:iter()
-    return ipairs(self.data)
+    -- return ipairs(self.data)
+    return sparseListIterator(self.data, self.size)
 end
 
 function List:to_set()

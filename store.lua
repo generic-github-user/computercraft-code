@@ -76,12 +76,12 @@ end
 
 function VChest:pull(from, to, count)
   local chest_pos, slot = self:address(from)
-  return pullItems(chest_pos, slot, to, count)
+  return pullItems(chest_pos, slot, to, count, index:get(from))
 end
 
 function VChest:push(from, to, count)
   local chest_pos, slot = self:address(to)
-  return pushItems(chest_pos, from, slot, count)
+  return pushItems(chest_pos, from, slot, count, index:get(to))
 end
 
 function withTempSlot(target, f)
@@ -114,13 +114,19 @@ end
 --   return turtle.suck(count)
 -- end
 
-function pushItems(target, from, to, count)
+-- item_eq = 
+function item_eq(a, b)
+  return (a == nil and b == nil) or (a.name == b.name and a.count == b.count and a.nbt == b.nbt)
+end
+
+function pushItems(target, from, to, count, expect)
   print("moving " .. (count or "") .. " items from slot " .. from .. " (local) to slot " .. to .. " (remote) @ " .. textutils.serialize(target))
   current_pos = travel(current_pos, target - vector.new(0, 1, 0))
   local chest = peripheral.find("minecraft:chest")
 
   -- local tmp_count = chest.getItemDetail(1).count
   -- local occupied = tmp_count > 0
+  assert(expect == nil or item_eq(chest.getItemDetail(to), expect))
   if to == 1 then
     return dropItems(target, from, count)
   else
@@ -131,11 +137,12 @@ function pushItems(target, from, to, count)
   end
 end
 
-function pullItems(target, from, to, count)
+function pullItems(target, from, to, count, expect)
   print("moving " .. (count or "") .. " items from slot " .. from .. " (remote) to slot " .. to .. " (local) @ " .. textutils.serialize(target))
   current_pos = travel(current_pos, target - vector.new(0, 1, 0))
   local chest = peripheral.find("minecraft:chest")
   if count == nil then count = chest.getItemDetail(from).count end
+  assert(expect == nil or item_eq(chest.getItemDetail(from), expect))
   if from == 1 then
     return suckItems(target, to, count)
   else
@@ -163,7 +170,7 @@ function dropItems(target, slot, count)
 end
 
 function suckItems(target, slot, count)
-  if count == nil then count = turtle.getItemCount(slot) end
+  -- if count == nil then count = turtle.getItemCount(slot) end
   current_pos = travel(current_pos, target - vector.new(0, 1, 0))
   turtle.select(slot)
   return turtle.suck(count)
@@ -258,7 +265,7 @@ function store()
   -- TODO: grab multiple (probably 12) stacks at once
   while getItems(info.staging):any(nonEmpty) do
     while getItems(info.staging):any(nonEmpty) and not range(1, 12):all(isOccupied) do
-      pullItems(info.staging, unwrap(getItems(info.staging):findIndexIf(nonEmpty)), 1, nil)
+      pullItems(info.staging, unwrap(getItems(info.staging):findIndexIf(nonEmpty)), 1, nil, nil)
     end
     for _, i in range(1, 12):filter(isOccupied):iter() do
       store_stack(index, i)
@@ -270,7 +277,7 @@ end
 
 function string_contains(a, b)
   local start, stop = string.find(a, b)
-  return a ~= nil
+  return start ~= nil
 end
 
 function List:unique()
@@ -287,20 +294,31 @@ function getattr(name)
   return (function (x) return x[name] end)
 end
 
+function nonNil(x)
+  return x ~= nil
+end
+
 -- TODO: clean this up.....
 function fetch(name, count)
+  print("Getting " .. count .. "x " .. name .. "...")
   assert(count >= 0)
   -- local matches = index:map(function (item) return item.name end)
-  local matches = index:map(getattr("name"))
+  local matches = index:filter(nonNil)
+    :map(getattr("name"))
     :unique()
     :filter(function (item) return string_contains(item, name) end)
-  if matches:length() > 1 then error("{" .. name .. "} is ambiguous; the following items all match: " ..
-    matches:map(function (item) return item.name end):show()) end
+  if matches:length() > 1 then
+    print("{" .. name .. "} is ambiguous; the following items all match: " .. matches:show())
+    return
+  end
+  -- if matches:length() > 1 then error("") end
   local real_name = matches:head()
+  print(index:filter(nonNil):length())
+  print(real_name)
 
   while count > 0 do
     while count > 0 and not range(1, 12):all(isOccupied) do
-      local slot = unwrap(index:findIndexIf(function (item) return item.name == real_name end))
+      local slot = unwrap(index:findIndexIf(function (item) return item ~= nil and item.name == real_name end))
       local item = index:get(slot)
       local n = math.min(item.count, count)
       -- info.storage:pull(slot - 1, unwrap(range(1, 12):findIf(isEmpty)), n)
