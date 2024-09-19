@@ -305,7 +305,7 @@ end
 function disambiguate(name)
   -- local matches = index:map(function (item) return item.name end)
   local names = index:filter(nonNil):map(getattr("name"))
-  local real_name = ""
+  local real_name
   if names:contains(name) then
     real_name = name
   else
@@ -357,12 +357,13 @@ function fetch(name, count)
 end
 
 function count(name)
-  local name_ = disambiguate(name)
+  local s, name_ = pcall(disambiguate, name)
+  if not s then error(name_) end -- ???
   return index:filter(function (item) return item ~= nil and item.name == name_ end):map(getattr("count")):sum()
 end
 
-function handle(f)
-  local success, err = pcall(f)
+function handle(f, ...)
+  local success, err = pcall(f, ...)
   if not success then
     save_index()
     current_pos = travel(current_pos, vector.new(0, 0, 0))
@@ -395,18 +396,21 @@ function main()
     elseif request.name == "get" then
       s, r = handle(function () return fetch(request.args.name, request.args.count) end)
     elseif request.name == "count" then
-      s, r = handle(function () return count(request.args.name) end)
+      -- s, r = handle(function () return count(request.args.name) end)
+      s, r = handle(count, request.args.name)
     else
       error("command not recognized")
     end
     local response = { type_ = "response" }
     if s then
-      response.content = "operation completed successfully: \n" .. r
+      response.content = "operation completed successfully: \n" .. dump(r)
     else
-      response.content = "operation failed: \n" .. r
-      break
+      response.content = "operation failed: \n" .. dump(r)
+      -- break
     end
-    rednet.broadcast(textutils.serialize(response))
+    local rtext = textutils.serialize(response)
+    print(rtext)
+    rednet.broadcast(rtext)
     sleep(1)
   end
 end
