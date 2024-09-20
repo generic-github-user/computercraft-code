@@ -52,9 +52,9 @@ function Dict:new()
     return d
 end
 
-function Dict:get(k) return self.data[dump(k)] end
+function Dict:get(k) return self.data[dump(k)][2] end
 function Dict:set(k, v)
-    self.data[dump(k)] = v
+    self.data[dump(k)] = {k, v}
     self.size = self.size + 1
     return self
 end
@@ -65,6 +65,25 @@ function Dict:show()
         r = r .. dump(k) .. " = " .. dump(v) .. "\n"
     end
     return r
+end
+
+function Dict:contains(k)
+    return self:get(k) ~= nil
+end
+
+function Dict:keys()
+    local l = List:new()
+    for k, v in pairs(self.data) do
+        l:append(v[1])
+    end
+    return l
+end
+
+function Dict:merge(a, b)
+    local c = Dict:new()
+    for _, k in a:keys():iter() do c:set(k, a:get(k)) end
+    for _, k in b:keys():iter() do c:set(k, b:get(k)) end
+    return c
 end
 
 function build(structure)
