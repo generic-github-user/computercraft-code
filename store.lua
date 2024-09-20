@@ -290,11 +290,6 @@ function store()
   return true
 end
 
-function string_contains(a, b)
-  local start, stop = string.find(a, b)
-  return start ~= nil
-end
-
 function List:unique()
   local s = {}
   local l = List:new()

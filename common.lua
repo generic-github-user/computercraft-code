@@ -352,7 +352,8 @@ function dump(o)
       local s = '{ '
       for k,v in pairs(o) do
          if type(k) ~= 'number' then k = '"'..k..'"' end
-         s = s .. '['..k..'] = ' .. dump(v) .. ', '
+        --  s = s .. '['..k  ..'] = ' .. dump(v) .. ', '
+        s = s .. k .. " = " .. dump(v) .. ", "
       end
       return s .. '} '
    else
@@ -613,6 +614,10 @@ function List:sum()
   return n
 end
 
+function List:partitionP(f)
+  return self:filter(f), self:filter(invert(f))
+end
+
 function cons(x, xs)
     local l = List:singleton(x)
     l:extend(xs)
@@ -639,3 +644,8 @@ print(List:product(List:from({List:from({1, 2, 3}), List:from({6, 7, 8})})):show
 
 -- function table_product(t)
 -- end
+
+function string_contains(a, b)
+  local start, stop = string.find(a, b)
+  return start ~= nil
+end
