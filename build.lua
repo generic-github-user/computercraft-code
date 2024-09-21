@@ -44,7 +44,7 @@ function structure_z(s)
 end
 
 function placeable_above(state, structure, pos)
-    local below = state:get(pos - vector.new(0, 0, 1))
+    local below = state:contains(pos - vector.new(0, 0, 1))
     local block = structure:get(pos)
     return block.direction == nil or block.direction == "z" or
         (block.direction == "-z" and not below) or (block.direction == "+z" and below) or
@@ -55,17 +55,32 @@ function valid_targets(state, structure, pos)
     local block = structure:get(pos)
     local xs = List:from({pos - vector.new(1, 0, 0), pos + vector.new(1, 0, 0)})
     local ys = List:from({pos - vector.new(0, 1, 0), pos + vector.new(0, 1, 0)})
+    local deltas = {
+        "-x" = vector.new(-1, 0, 0),
+        "+x" = vector.new(1, 0, 0),
+        "-y" = vector.new(0, -1, 0),
+        "+y" = vector.new(0, 1, 0)
+    }
+    local candidates
     if block.half == "bottom" then
-        if block.direction == nil then return List:concat_n(List:from({xs, ys}))
-        if block.direction == "x" then return xs end
-        if block.direction == "y" then return ys end
-
-        local b
-        if block.direction == "+x" then b = end TODO
-
-        return List:singleton(b)
+        if block.direction == nil then candidates = List:concat_n(List:from({xs, ys}))
+        elseif block.direction == "x" then candidates = xs
+        elseif block.direction == "y" then candidates = ys
+        else
+            local offset
+            -- if block.direction == "+x" then b = end TODO
+            for k, v in pairs(deltas) do
+                if block.direction == k then offset = v end
+            end
+            if state:contains(pos - offset) or state:contains(pos - vector.new(0, 0, 1)) then
+                offset = -offset
+            end
+            candidates = List:singleton(pos + offset)
+        end
+    else
+        candidates = List:empty()
     end
-    return List:empty()
+    return candidates:filter(function (pos) return not state:contains(pos) end)
 end
 
 function plan_route(structure)
@@ -81,6 +96,7 @@ function plan_route(structure)
         while side:size() > 0 do
             local block = side:to_list():min_by(function (b) return (b - prev):length() end)
             local targets = valid_targets(state, structure, block)
+            print("targets: " .. targets:show())
             if targets:length() == 0 then
                 error("could not find suitable route for structure")
             else
@@ -100,6 +116,16 @@ function plan_route(structure)
         end
     end
     return route
+end
+
+function build(structure)
+    -- print(textutils.serialize(structure:blocks()))
+    print(structure:blocks():show())
+    print(structure:blocks().size)
+    -- print(structure:blocks().type_)
+
+    local route = plan_route(structure)
+    print("route: " .. route:show())
 end
 
 function Item(name, data)
@@ -157,13 +183,6 @@ function Dict:merge(a, b)
     for _, k in a:keys():iter() do c:set(k, a:get(k)) end
     for _, k in b:keys():iter() do c:set(k, b:get(k)) end
     return c
-end
-
-function build(structure)
-    -- print(textutils.serialize(structure:blocks()))
-    print(structure:blocks():show())
-    print(structure:blocks().size)
-    -- print(structure:blocks().type_)
 end
 
 function main()
