@@ -1,5 +1,7 @@
 -- from Claude 3.5 Sonnet
 
+#include "common"
+
 local Set = {}
 Set.__index = Set
 
@@ -19,15 +21,17 @@ function Set:size()
 end
 
 function Set:insert(element)
-    self.elements[element] = true
+    -- self.elements[element] = true
+    self.elements[dump(element)] = element
 end
 
 function Set:remove(element)
-    self.elements[element] = nil
+    self.elements[dump(element)] = nil
 end
 
 function Set:contains(element)
-    return self.elements[element] == true
+    -- return self.elements[element] == true
+    return self.elements[element] ~= nil
 end
 
 -- Optional: Add a method to print the set
@@ -49,7 +53,9 @@ end
 
 function Set:to_list()
     local l = List:new()
-    
+    for k, v in pairs(self.elements) do l:append(v) end
+    return l
+end
 
 ----
 

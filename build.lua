@@ -51,14 +51,56 @@ function placeable_above(state, structure, pos)
         (block.half == "top" and not below) or (block.half == "bottom" and below)
 end
 
+function valid_targets(state, structure, pos)
+    local block = structure:get(pos)
+    local xs = List:from({pos - vector.new(1, 0, 0), pos + vector.new(1, 0, 0)})
+    local ys = List:from({pos - vector.new(0, 1, 0), pos + vector.new(0, 1, 0)})
+    if block.half == "bottom" then
+        if block.direction == nil then return List:concat_n(List:from({xs, ys}))
+        if block.direction == "x" then return xs end
+        if block.direction == "y" then return ys end
+
+        local b
+        if block.direction == "+x" then b = end TODO
+
+        return List:singleton(b)
+    end
+    return List:empty()
+end
+
 function plan_route(structure)
     local zs = structure_z(structure)
-    local state = Dict:new()
+    -- local state = Dict:new()
+    local state = Set:new()
     local prev = vector.new(0, 0, 0)
     local route = List:new()
     for i=zs.a, zs.b do
         local layer = structure:keys():filter(function (p) return p.z == i end)
-        local top, side = layer:partitionP(function (p) return place)
+        local top, side = layer:partitionP(function (p) return placeable_above(state, structure, p) end)
+        top, side = Set:from(top), Set:from(side)
+        while side:size() > 0 do
+            local block = side:to_list():min_by(function (b) return (b - prev):length() end)
+            local targets = valid_targets(state, structure, block)
+            if targets:length() == 0 then
+                error("could not find suitable route for structure")
+            else
+                -- TODO
+                route:append(block)
+                state:insert(block)
+                side:remove(block)
+                prev = block
+            end
+        end
+        while top:size() > 0 do
+            local block = top:to_list():min_by(function (b) return (b - prev):length() end)
+            route:append(block)
+            state:insert(block)
+            side:remove(block)
+            prev = block
+        end
+    end
+    return route
+end
 
 function Item(name, data)
     if not string_contains(name, "minecraft:") then name = "minecraft:" .. name end
