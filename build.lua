@@ -164,6 +164,15 @@ function build(structure)
         return range(1, 15):findIf(function (i) return turtle.getItemDetail(i).name == block.name end)
     end
 
+    local function turnTo(pos1, pos2)
+        local d = pos2 - pos1
+        if d == vector.new(0, 1, 0) then return 0
+        elseif d == vector.new(1, 0, 0) then return 1
+        elseif d == vector.new(0, -1, 0) then return 2
+        elseif d == vector.new(-1, 0, 0) then return 3
+        end
+    end
+
     local state = Set:new()
     -- local directions = List:from({"+y", "+x", "-y", "-x"})
     for i, pos in route:iter() do
@@ -175,11 +184,11 @@ function build(structure)
             end
             slot = getSlot(block)
         end
+        turtle.select(unwrap(slot))
         if placeable_above(state, structure, pos) then
-            travel(pos + vector.new(0, 0, 1))
-            turtle.select(unwrap(slot))
+            travel(state, pos + vector.new(0, 0, 1), "build")
             if cardinal_directions:contains(block.direction) then
-                local r = unwrap(cardinal_directions:index(block.direction))
+                local r = unwrap(cardinal_directions:index(block.direction)) - 1
                 turnRight(r)
                 turtle.placeDown()
                 turnLeft(r)
@@ -187,11 +196,25 @@ function build(structure)
                 turtle.placeDown()
             end
         else
-
+            -- TODO: use closest target position
+            travel(state, valid_targets(state, structure, pos):head(), "build")
+            local r = turnTo(current_pos, pos)
+            turnRight(r)
+            turtle.place()
+            turnLeft(r)
         end
         state:insert(pos)
     end
-    travel(vector.new(0, 0, 0))
+    travel(state, vector.new(0, 0, 0), "storage")
+end
+
+function travel(pos, region)
+    local delta = pos - current_pos
+
+    -- TODO
+
+    current_pos = pos
+    current_region = region
 end
 
 function Item(name, data)
@@ -252,6 +275,8 @@ function Dict:merge(a, b)
 end
 
 function main()
+    current_pos = vector.new(0, 0, 0)
+    current_region = "storage"
     return build(Shape:new(Rect:new(vector.new(0, 2, 0), vector.new(2, 3, 1)), Item("stone")))
 end
 
