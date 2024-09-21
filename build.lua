@@ -43,12 +43,21 @@ function structure_z(s)
     return Range:new(zs:min(), zs:max())
 end
 
+-- TODO
+function has_vertical_variants(name)
+    return string_contains(name, "_log") or string_contains(name, "piston")
+end
+
 function placeable_above(state, structure, pos)
     local below = state:contains(pos - vector.new(0, 0, 1))
     local block = structure:get(pos)
-    return block.direction == nil or block.direction == "z" or
-        (block.direction == "-z" and not below) or (block.direction == "+z" and below) or
-        (block.half == "top" and not below) or (block.half == "bottom" and below)
+    -- TODO: check this...
+    return (block.direction == nil
+        or block.direction == "z"
+        or (block.direction == "-z" and not below)
+        or (block.direction == "+z" and below)
+        or (cardinal_directions:contains(block.direction) and not has_vertical_variants(block.name))) and
+        (block.half == nil or (block.half == "top" and not below) or (block.half == "bottom" and below))
 end
 
 function valid_targets(state, structure, pos)
@@ -118,6 +127,30 @@ function plan_route(structure)
     return route
 end
 
+function material_batch(structure, route, k)
+    local function count_stacks(item_counts)
+        local n = 0
+        for k, v in pairs(item_counts) do
+            n = n + math.ceil(v / 64) -- TODO
+        end
+        return n
+    end
+
+    local items = {}
+    -- while count_stacks(items) <= 15 do
+    local route_blocks = route:map(structure:get)
+    for i=k, route_blocks:length() do
+        local b = route_blocks:get(i).name
+        if items[b] == nil then items[b] = 1
+        else items[b] = items[b] + 1 end
+        if count_stacks(items) > 15 then
+            items[b] = items[b] - 1
+            return items
+        end
+    end
+    return items
+end
+
 function build(structure)
     -- print(textutils.serialize(structure:blocks()))
     print(structure:blocks():show())
@@ -126,6 +159,39 @@ function build(structure)
 
     local route = plan_route(structure)
     print("route: " .. route:show())
+
+    local function getSlot(block)
+        return range(1, 15):findIf(function (i) return turtle.getItemDetail(i).name == block.name end)
+    end
+
+    local state = Set:new()
+    -- local directions = List:from({"+y", "+x", "-y", "-x"})
+    for i, pos in route:iter() do
+        local block = structure:get(pos)
+        local slot = getSlot(block)
+        if not slot.some then
+            for k, v in pairs(material_batch(structure, route, i)) do
+                info.storage:fetch(k, v, 1)
+            end
+            slot = getSlot(block)
+        end
+        if placeable_above(state, structure, pos) then
+            travel(pos + vector.new(0, 0, 1))
+            turtle.select(unwrap(slot))
+            if cardinal_directions:contains(block.direction) then
+                local r = unwrap(cardinal_directions:index(block.direction))
+                turnRight(r)
+                turtle.placeDown()
+                turnLeft(r)
+            else
+                turtle.placeDown()
+            end
+        else
+
+        end
+        state:insert(pos)
+    end
+    travel(vector.new(0, 0, 0))
 end
 
 function Item(name, data)
@@ -189,4 +255,5 @@ function main()
     return build(Shape:new(Rect:new(vector.new(0, 2, 0), vector.new(2, 3, 1)), Item("stone")))
 end
 
+cardinal_directions = List:from({"+y", "+x", "-y", "-x"})
 main()

@@ -26,6 +26,10 @@ function turnRight(n)
     for i=1,n do turtle.turnRight() end
 end
 
+function turnLeft(n)
+    for i=1,n do turtle.turnLeft() end
+end
+
 up = move_n(turtle.up, turtle.digUp)
 down = move_n(turtle.down, turtle.digDown)
 forward = move_n(turtle.forward, turtle.dig)
@@ -160,6 +164,13 @@ end
 function List:findIndexIf(f)
   for i=1, self:length() do
     if f(self.data[i]) then return Some(i) end
+  end
+  return None()
+end
+
+function List:index(x)
+  for i=1, self:length() do
+    if self.data[i] == x then return Some(i) end
   end
   return None()
 end
