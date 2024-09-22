@@ -208,14 +208,21 @@ function build(structure)
     travel(state, vector.new(0, 0, 0), "storage")
 end
 
-function travel(pos, region)
-    local delta = pos - current_pos
+-- TODO
+-- function travel(pos, region)
+--     local delta = pos - current_pos
 
-    -- TODO
+--     if current_region == "storage" then
+--         if region == "storage" then
+--             move_x(delta.x)
+--             move_y(delta.y)
+--             move_z(delta.z)
+--         end
+--     elseif current_region == ""
 
-    current_pos = pos
-    current_region = region
-end
+--     current_pos = pos
+--     current_region = region
+-- end
 
 function Item(name, data)
     if not string_contains(name, "minecraft:") then name = "minecraft:" .. name end
