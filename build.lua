@@ -1,5 +1,6 @@
 require "common"
 require "set"
+require "vchest"
 
 Shape = {}
 
@@ -280,6 +281,14 @@ function Dict:merge(a, b)
     for _, k in b:keys():iter() do c:set(k, b:get(k)) end
     return c
 end
+
+info = {
+    temp_slot = 15,
+    fuel_slot = 16,
+    storage = VChest:new(Rect:new(vector.new(2, 1, 0), vector.new(16, 1, 4)):blocks_vec()),
+    fuel_pos = vector.new(-2, 1, 0),
+    fuel_limit = 400,
+}
 
 function main()
     current_pos = vector.new(0, 0, 0)
