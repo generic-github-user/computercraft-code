@@ -1,4 +1,5 @@
 require "common"
+require "vchest"
 
 function move_xyz(delta)
     print("following vector: " .. serialize_vector(delta))
